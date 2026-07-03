@@ -53,7 +53,7 @@ var EXERCISES = [
   { id:4, name:"LECTURA", label:"Ejercicio 5 · Párrafo en voz alta",
     instruction:"Lee el párrafo EN VOZ ALTA · PIENSA: ¡VOZ FUERTE! · Imagina hablarle a alguien a 3 metros",
     reps:1, type:"reading", color:"#EF4444", emoji:"📖",
-    text:"El mar es profundo y sereno. Las olas rompen con fuerza sobre la orilla de arena dorada. Las gaviotas vuelan alto en el cielo azul brillante. Un velero blanco cruza lentamente el horizonte. El viento sopla fresco y trae olor a sal. La naturaleza nos recuerda que la vida es bella y vale la pena vivirla con plenitud y alegría cada día." }
+    text:"La resiliencia no es la ausencia de dificultades, sino la fuerza para crecer a través de ellas. Como el bambú que se dobla con el viento sin quebrarse, quien se adapta encuentra firmeza donde otros solo ven obstáculos. Adaptarse al cambio no es rendirse ante él, sino aprender su lenguaje. El río no lucha contra la roca: la rodea con paciencia, la pule y sigue su camino hacia el mar. Así, una mente flexible convierte cada revés en una lección y cada caída en un nuevo punto de partida. La superación empieza con un solo paso y con una sola voz que se atreve a decir: puedo intentarlo otra vez. No importa cuántas veces caigamos, sino cuántas elegimos levantarnos. La verdadera fortaleza no está en no doblarse jamás, sino en volver a erguirse, más sabios y más serenos, después de cada tormenta. Cada día es una nueva oportunidad para reinventarnos, para hablar con claridad y avanzar con valentía hacia aquello que soñamos." }
 ];
 
 /* ─────────── Utilidades ─────────── */
@@ -112,6 +112,7 @@ var state = {
   timer:null,
   paused:false, restSec:0, restTimer:null,
   gap:0, gapTimer:null, waterAuto:false,
+  readSec:300, readTimer:null, readRunning:false,
   // audio
   micOn:false, micError:null, reading:null,
   audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
@@ -356,9 +357,9 @@ var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#475569;text-transform:
 
 /* ─────────── Navegación ─────────── */
 function go(screen){ if(screen==="home"||screen==="history"){ if(state.micOn) stopMic(); } state.screen=screen; render(); }
-function openEx(i){ clearPause(); state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
-function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} clearPause(); state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
-function newSession(){ if(state.micOn) stopMic(); state.done={}; state.sessionId=null; state.screen="home"; render(); }
+function openEx(i){ clearPause(); clearRead(); state.readSec=300; state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
+function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} clearPause(); clearRead(); state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
+function newSession(){ if(state.micOn) stopMic(); clearRead(); state.done={}; state.sessionId=null; state.screen="home"; render(); }
 
 function recordExercise(exId, stats){
   if(!state.sessionId){ state.sessionId=Date.now(); state.log.push({id:state.sessionId,date:new Date().toISOString(),exercises:{}}); }
@@ -367,7 +368,7 @@ function recordExercise(exId, stats){
 }
 function finishEx(exId){
   state.done[exId]=true;
-  clearPause();
+  clearPause(); clearRead();
   if(state.micOn) stopMic();
   if(Object.keys(state.done).length>=EXERCISES.length) state.screen="done";
   else state.screen="home";
@@ -921,22 +922,51 @@ function PhraseScreen(){
 }
 
 /* ─────────── Lectura ─────────── */
+var _readNode=null;
+function readStart(){
+  if(state.readRunning || state.readSec<=0) return;
+  state.readRunning=true;
+  if(state.readTimer) clearInterval(state.readTimer);
+  state.readTimer=setInterval(function(){
+    state.readSec--;
+    if(state.readSec<=0){ state.readSec=0; clearRead(); render(); return; }
+    if(_readNode) _readNode.textContent=fmtTime(state.readSec);
+  }, 1000);
+  render();
+}
+function clearRead(){ if(state.readTimer){ clearInterval(state.readTimer); state.readTimer=null; } state.readRunning=false; }
+
 function ReadScreen(){
   var ex=EXERCISES[state.exIdx];
+  var running=state.readRunning, done=(state.readSec<=0);
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
-  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 20px;"});
+  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 10px;"});
   header.appendChild(btn("‹",BACK_BTN,goHome));
-  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"LECTURA EN VOZ ALTA"),el("div",{style:"font-size:14px;color:#475569;"},"Lee el párrafo completo")]));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"LECTURA EN VOZ ALTA"),el("div",{style:"font-size:14px;color:#475569;"},"Lee en voz alta durante 5 minutos")]));
   wrap.appendChild(header);
+
+  // cronómetro regresivo (5:00)
+  var timeColor = done?"#10B981":(running?"#F59E0B":"#64748B");
+  var tbox=el("div",{style:"text-align:center;padding:2px 20px 8px;"});
+  tbox.appendChild(el("div",{style:"font-size:10px;letter-spacing:2px;color:#475569;text-transform:uppercase;margin-bottom:2px;"},"Cuenta regresiva"));
+  var t=el("div",{style:"font-size:54px;font-weight:900;letter-spacing:-2px;line-height:1;color:"+timeColor+";"},fmtTime(state.readSec));
+  _readNode=t; tbox.appendChild(t);
+  if(!running && !done) tbox.appendChild(btn("▶  Comenzar","margin-top:12px;border:none;border-radius:14px;padding:12px 32px;font-size:15px;font-weight:800;color:#fff;background:"+ex.color+";",readStart));
+  else if(running) tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#F59E0B;font-weight:800;"},"● Leyendo… ¡mantén la voz FUERTE!"));
+  else if(done) tbox.appendChild(el("div",{style:"margin-top:8px;font-size:14px;color:#10B981;font-weight:900;"},"✓ ¡Tiempo completado!"));
+  wrap.appendChild(tbox);
+
   var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:0 20px;"});
-  body.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";margin-bottom:16px;font-weight:700;text-align:center;"},"📖 VOZ ALTA · IMAGINA HABLARLE A ALGUIEN A 3 METROS"));
-  var carta=el("div",{style:"background:#0D1525;border-radius:20px;border:1.5px solid "+ex.color+"30;padding:28px 24px;"});
-  carta.appendChild(el("div",{style:"font-size:20px;color:#CBD5E1;line-height:2;"},ex.text));
+  body.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";margin-bottom:12px;font-weight:700;text-align:center;"},"📖 IMAGINA HABLARLE A ALGUIEN A 3 METROS"));
+  var carta=el("div",{style:"background:#0D1525;border-radius:20px;border:1.5px solid "+ex.color+"30;padding:22px 22px;"});
+  carta.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";text-transform:uppercase;font-weight:800;margin-bottom:12px;text-align:center;"},"Resiliencia y adaptación"));
+  carta.appendChild(el("div",{style:"font-size:19px;color:#CBD5E1;line-height:1.9;text-align:justify;"},ex.text));
   body.appendChild(carta);
-  body.appendChild(el("div",{style:"margin-top:16px;font-size:13px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
+  body.appendChild(el("div",{style:"margin-top:14px;font-size:13px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
   wrap.appendChild(body);
-  var foot=el("div",{style:"padding:24px 20px 44px;"});
-  foot.appendChild(btn("✓  Lectura completa", BIG_BTN+"background:"+ex.color+";", function(){ recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
+
+  var foot=el("div",{style:"padding:18px 20px 44px;"});
+  foot.appendChild(btn("✓  Lectura completa", BIG_BTN+"background:"+(done?"#10B981":ex.color)+";", function(){ clearRead(); recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
   wrap.appendChild(foot);
   return wrap;
 }
