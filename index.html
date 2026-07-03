@@ -108,6 +108,7 @@ var state = {
   repLog:[], dbLog:[], done:{}, log:loadLog(), settings:loadSettings(),
   sessionId:null,
   timer:null,
+  paused:false, restSec:0, restTimer:null,
   // audio
   micOn:false, micError:null, reading:null,
   audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
@@ -216,7 +217,7 @@ function startMic(cb){
         state.reading=s;
         state.history.push({db:db, mf:mf});
         if(state.history.length>110) state.history.shift();
-        if(state.running){
+        if(state.running && !state.paused){
           if(db>=55) state.repSamples.db.push(db);
           if(s.voiced && s.freq>0) state.repSamples.hz.push(s.freq);
         }
@@ -296,8 +297,8 @@ var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#475569;text-transform:
 
 /* ─────────── Navegación ─────────── */
 function go(screen){ if(screen==="home"||screen==="history"){ if(state.micOn) stopMic(); } state.screen=screen; render(); }
-function openEx(i){ state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
-function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
+function openEx(i){ clearPause(); state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
+function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} clearPause(); state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
 function newSession(){ if(state.micOn) stopMic(); state.done={}; state.sessionId=null; state.screen="home"; render(); }
 
 function recordExercise(exId, stats){
@@ -307,10 +308,46 @@ function recordExercise(exId, stats){
 }
 function finishEx(exId){
   state.done[exId]=true;
+  clearPause();
   if(state.micOn) stopMic();
   if(Object.keys(state.done).length>=EXERCISES.length) state.screen="done";
   else state.screen="home";
   render();
+}
+
+/* ─────────── Pausa (descanso / tomar agua) ─────────── */
+var _pauseNode=null;
+function pauseSession(){
+  if(state.paused) return;
+  state.paused=true;
+  if(state.timer){ clearInterval(state.timer); state.timer=null; }   // congela el cronómetro de la rep
+  state.restSec=0;
+  if(state.restTimer) clearInterval(state.restTimer);
+  state.restTimer=setInterval(function(){ state.restSec++; if(_pauseNode) _pauseNode.textContent=fmtTime(state.restSec); }, 1000);
+  render();
+}
+function resumeSession(){
+  if(!state.paused) return;
+  state.paused=false;
+  if(state.restTimer){ clearInterval(state.restTimer); state.restTimer=null; }
+  if(state.running){   // si estaba corriendo una rep, reanuda el cronómetro donde quedó
+    if(state.timer) clearInterval(state.timer);
+    state.timer=setInterval(function(){ state.sec++; updateTimer(); }, 1000);
+  }
+  render();
+}
+function clearPause(){ if(state.restTimer){ clearInterval(state.restTimer); state.restTimer=null; } state.paused=false; }
+function pauseOverlay(){
+  var ov=el("div",{style:"position:fixed;inset:0;z-index:60;background:rgba(6,11,24,0.94);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
+  ov.appendChild(el("div",{style:"font-size:80px;line-height:1;margin-bottom:14px;",class:"card"},"💧"));
+  ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:5px;color:#3B82F6;text-transform:uppercase;margin-bottom:10px;font-weight:800;"},"En pausa"));
+  ov.appendChild(el("div",{style:"font-size:30px;font-weight:900;color:#F8FAFC;margin-bottom:8px;"},"Toma agua"));
+  ov.appendChild(el("div",{style:"font-size:14px;color:#64748B;margin-bottom:20px;line-height:1.6;"},"Descansa e hidrátate. Reanuda cuando estés listo."));
+  var t=el("div",{style:"font-size:46px;font-weight:900;letter-spacing:-2px;color:#3B82F6;margin-bottom:28px;"},fmtTime(state.restSec||0));
+  _pauseNode=t; ov.appendChild(t);
+  ov.appendChild(btn([el("span",{style:"font-size:20px;"},"▶  "),"REANUDAR"],
+    "border:none;border-radius:16px;padding:18px 44px;font-size:18px;font-weight:900;color:#fff;background:#10B981;letter-spacing:0.5px;", resumeSession));
+  return ov;
 }
 
 /* ─────────── Cronómetro ─────────── */
@@ -521,6 +558,10 @@ function SustainScreen(){
     el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},ex.name),
     el("div",{style:"font-size:14px;color:#475569;"},"Repetición "+(state.rep+1)+" de "+exReps(ex))
   ]));
+  var pauseBtn=btn([el("span",{style:"font-size:15px;"},"⏸"),el("span",{style:"font-size:13px;font-weight:800;margin-left:4px;"},"💧")],
+    "background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.55);border-radius:12px;padding:8px 11px;color:#3B82F6;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;",
+    pauseSession);
+  header.appendChild(pauseBtn);
   var micBtn=btn(state.micOn?"🎤 ON":"🎤 Medir",
     "background:"+(state.micOn?"rgba(16,185,129,0.12)":"rgba(168,85,247,0.12)")+";border:1.5px solid "+(state.micOn?"#10B981":"#A855F7")+";border-radius:12px;padding:8px 12px;color:"+(state.micOn?"#10B981":"#A855F7")+";font-size:12.5px;font-weight:800;flex-shrink:0;",
     function(){ if(state.micOn) stopMic(); else startMic(function(){}); });
@@ -615,6 +656,7 @@ function SustainScreen(){
     foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:"+(hit?"#10B981":"#141E30")+";border:2px solid "+(hit?"#10B981":"rgba(255,255,255,0.08)")+";", repDone));
   }
   wrap.appendChild(foot);
+  if(state.paused) wrap.appendChild(pauseOverlay());
   return wrap;
 }
 
