@@ -37,11 +37,11 @@ var EXERCISES = [
     zone:{min:45,max:52,mode:"in",label:"rango normal (LA2–MI3)"} },
   { id:1, name:"TONO ALTO", label:"Ejercicio 2 · Voz aguda", vowel:"EHHH",
     instruction:"Inhala profundo · Vocaliza EHHH en tu tono MÁS ALTO · Lo MÁS FUERTE posible",
-    reps:5, target:5, type:"sustain", color:"#A855F7", emoji:"📢", pitchRole:"max",
+    reps:15, target:5, type:"sustain", color:"#A855F7", emoji:"📢", pitchRole:"max",
     zone:{min:55,max:77,mode:"above",label:"zona aguda (SOL3+)"} },
   { id:2, name:"TONO GRAVE", label:"Ejercicio 3 · Voz grave", vowel:"OHHH",
     instruction:"Inhala profundo · Vocaliza OHHH en tu tono MÁS GRAVE · Lo MÁS FUERTE posible",
-    reps:5, target:5, type:"sustain", color:"#10B981", emoji:"🔉", pitchRole:"min",
+    reps:15, target:5, type:"sustain", color:"#10B981", emoji:"🔉", pitchRole:"min",
     zone:{min:34,max:43,mode:"below",label:"zona grave (SOL2−)"} },
   { id:3, name:"FRASES", label:"Ejercicio 4 · Voz funcional",
     instruction:"Di cada frase EN VOZ ALTA y FUERTE · Si sientes que exageras — ¡vas bien!",
@@ -379,7 +379,7 @@ function repDone(){
   if(state.rep+1>=exReps(ex)){
     var avg=Math.round(state.repLog.reduce(function(a,b){return a+b;},0)/state.repLog.length);
     var best=Math.max.apply(null,state.repLog);
-    var stats={type:"sustain",name:ex.name,reps:state.repLog.length,avg:avg,best:best};
+    var stats={type:ex.type,name:ex.name,reps:state.repLog.length,avg:avg,best:best};
     var wa=state.dbLog.filter(Boolean);
     if(wa.length){
       stats.avgDb=Math.round(wa.reduce(function(a,r){return a+r.avgDb;},0)/wa.length);
@@ -391,7 +391,7 @@ function repDone(){
       var avgs=wa.map(function(r){return r.avgHz;}).filter(function(v){return v>0;});
       if(ex.pitchRole==="max"&&maxs.length){ var h=Math.max.apply(null,maxs); stats.pitch={note:hzToNote(h),hz:Math.round(h)}; }
       else if(ex.pitchRole==="min"&&mins.length){ var h2=Math.min.apply(null,mins); stats.pitch={note:hzToNote(h2),hz:Math.round(h2)}; }
-      else if(avgs.length){ var h3=avgs.reduce(function(a,b){return a+b;},0)/avgs.length; stats.pitch={note:hzToNote(h3),hz:Math.round(h3)}; }
+      else if(ex.pitchRole&&avgs.length){ var h3=avgs.reduce(function(a,b){return a+b;},0)/avgs.length; stats.pitch={note:hzToNote(h3),hz:Math.round(h3)}; }
     }
     recordExercise(ex.id, stats);
     finishEx(ex.id);
@@ -607,7 +607,7 @@ function SustainScreen(){
   right.appendChild(metaLine);
   rowTop.appendChild(right);
   body.appendChild(rowTop);
-  _liveNodes={thermo:thermo,dbRow:dbRow,zoneLine:zoneLine,noteLine:noteLine,timerEl:timerEl,metaLine:metaLine,graph:null};
+  _liveNodes={thermo:thermo,dbRow:dbRow,zoneLine:zoneLine,noteLine:noteLine,timerEl:timerEl,metaLine:metaLine,graph:null,pianoKeys:null,pianoActive:null};
   updateLiveDOM();
 
   // mic off prompts
@@ -625,6 +625,15 @@ function SustainScreen(){
     gWrap.appendChild(el("div",{style:"font-size:10.5px;color:#334155;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
     body.appendChild(gWrap);
     _liveNodes.graph=gWrap;
+
+    // piano en vivo (nota actual resaltada)
+    var am=(state.reading&&state.reading.midi!=null)?state.reading.midi:null;
+    var pWrap=el("div",{style:"margin-top:12px;"});
+    pWrap.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#475569;font-weight:700;padding:0 2px 2px;"},[el("span",null,"🎹 TU TONO EN EL PIANO"),el("span",{style:"color:#A855F7;"},"toca una tecla")]));
+    var pno=buildPiano(am, 104);
+    pWrap.appendChild(pno.node);
+    body.appendChild(pWrap);
+    _liveNodes.pianoKeys=pno.keys; _liveNodes.pianoActive=am;
   }
 
   // stats
@@ -662,7 +671,7 @@ function SustainScreen(){
 
 // Actualización ligera durante mic (sin re-render completo)
 function updateLive(){
-  if(state.screen==="ex" && EXERCISES[state.exIdx].type==="sustain") updateLiveDOM();
+  if(state.screen==="ex"){ var t=EXERCISES[state.exIdx].type; if(t==="sustain"||t==="phrases") updateLiveDOM(); }
   else if(state.screen==="tuner") updateTunerDOM();
 }
 function updateLiveDOM(){
@@ -677,50 +686,127 @@ function updateLiveDOM(){
   _liveNodes.zoneLine.textContent=state.micOn?(zone.label+(zone.msg?" · "+zone.msg:"")):"🎤 apagado";
   _liveNodes.zoneLine.style.color=state.micOn?zone.color:"#334155";
   _liveNodes.zoneLine.style.animation=(state.micOn&&state.running&&zone.key==="low")?"blink 1s ease infinite":"none";
-  var pStat=r?pitchStatus(r.mf,ex.zone):null;
-  _liveNodes.noteLine.innerHTML="";
-  _liveNodes.noteLine.appendChild(el("span",{style:"color:"+((r&&r.midi!=null)?"#C4B5FD":"#1E293B")+";"}, (r&&r.midi!=null)?("♪ "+midiName(r.midi)):"♪ ——"));
-  if(pStat) _liveNodes.noteLine.appendChild(el("span",{style:"font-size:11px;font-weight:800;margin-left:7px;color:"+(pStat.ok?"#10B981":"#F59E0B")+";"},pStat.txt));
-  var hit=state.sec>=ex.target;
+  if(_liveNodes.noteLine){
+    var pStat=r?pitchStatus(r.mf,ex.zone):null;
+    _liveNodes.noteLine.innerHTML="";
+    _liveNodes.noteLine.appendChild(el("span",{style:"color:"+((r&&r.midi!=null)?"#C4B5FD":"#1E293B")+";"}, (r&&r.midi!=null)?("♪ "+midiName(r.midi)):"♪ ——"));
+    if(pStat) _liveNodes.noteLine.appendChild(el("span",{style:"font-size:11px;font-weight:800;margin-left:7px;color:"+(pStat.ok?"#10B981":"#F59E0B")+";"},pStat.txt));
+  }
+  var hasTarget=ex.target!=null;
+  var hit=hasTarget && state.sec>=ex.target;
   _liveNodes.timerEl.textContent=fmtTime(state.sec);
   _liveNodes.timerEl.style.color=hit?"#10B981":state.running?"#F8FAFC":"#1E293B";
-  _liveNodes.metaLine.textContent=hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+td+" dB");
+  _liveNodes.metaLine.textContent=hasTarget?(hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+td+" dB")):("OBJETIVO: "+td+" dB · mide tu volumen");
   _liveNodes.metaLine.style.color=hit?"#10B981":"#334155";
   if(_liveNodes.graph && state.micOn){
     _liveNodes.graph.innerHTML="";
     _liveNodes.graph.appendChild(liveGraphSVG(state.history, td, ex));
     _liveNodes.graph.appendChild(el("div",{style:"font-size:10.5px;color:#334155;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
   }
+  if(_liveNodes.pianoKeys){
+    var am2=(r&&r.midi!=null)?r.midi:null;
+    if(_liveNodes.pianoActive!==am2){
+      var pk=_liveNodes.pianoKeys;
+      if(_liveNodes.pianoActive!=null && pk[_liveNodes.pianoActive]) setKeyActive(pk[_liveNodes.pianoActive],_liveNodes.pianoActive,false);
+      if(am2!=null && pk[am2]) setKeyActive(pk[am2],am2,true);
+      _liveNodes.pianoActive=am2;
+    }
+  }
 }
-function updateTimer(){ if(_liveNodes.timerEl){ var ex=EXERCISES[state.exIdx]; var hit=state.sec>=ex.target; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#10B981":state.running?"#F8FAFC":"#1E293B"; _liveNodes.metaLine.textContent=hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+state.settings.targetDb+" dB"); _liveNodes.metaLine.style.color=hit?"#10B981":"#334155"; } }
+function updateTimer(){ if(_liveNodes.timerEl){ var ex=EXERCISES[state.exIdx]; var hasTarget=ex.target!=null; var hit=hasTarget&&state.sec>=ex.target; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#10B981":state.running?"#F8FAFC":"#1E293B"; _liveNodes.metaLine.textContent=hasTarget?(hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+state.settings.targetDb+" dB")):("OBJETIVO: "+state.settings.targetDb+" dB · mide tu volumen"); _liveNodes.metaLine.style.color=hit?"#10B981":"#334155"; } }
 
 /* ─────────── Frases ─────────── */
 function PhraseScreen(){
   var ex=EXERCISES[state.exIdx];
   var REPS=exReps(ex);
-  var isLast=state.phraseIdx===REPS-1;
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
-  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 16px;"});
+
+  // header
+  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 8px;"});
   header.appendChild(btn("‹",BACK_BTN,goHome));
-  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#475569;"},"Frase "+(state.phraseIdx+1)+" de "+REPS)]));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#475569;"},"Frase "+(state.rep+1)+" de "+REPS)]));
+  header.appendChild(btn([el("span",{style:"font-size:15px;"},"⏸"),el("span",{style:"font-size:13px;font-weight:800;margin-left:4px;"},"💧")],
+    "background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.55);border-radius:12px;padding:8px 11px;color:#3B82F6;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;", pauseSession));
+  header.appendChild(btn(state.micOn?"🎤 ON":"🎤 Medir",
+    "background:"+(state.micOn?"rgba(16,185,129,0.12)":"rgba(168,85,247,0.12)")+";border:1.5px solid "+(state.micOn?"#10B981":"#A855F7")+";border-radius:12px;padding:8px 12px;color:"+(state.micOn?"#10B981":"#A855F7")+";font-size:12.5px;font-weight:800;flex-shrink:0;",
+    function(){ if(state.micOn) stopMic(); else startMic(function(){}); }));
   wrap.appendChild(header);
-  var barBg=el("div",{style:"margin:0 20px 28px;height:4px;background:#0F1829;border-radius:99px;overflow:hidden;"});
-  barBg.appendChild(el("div",{style:"height:100%;width:"+(state.phraseIdx/REPS*100)+"%;background:"+ex.color+";border-radius:99px;"}));
-  wrap.appendChild(barBg);
-  var body=el("div",{style:"flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 20px;"});
-  if(state.phraseIdx===0) body.appendChild(repStepperRow(ex));
-  body.appendChild(el("div",{style:"font-size:12px;letter-spacing:3px;color:"+ex.color+";margin-bottom:20px;font-weight:700;"},"📢 DI EN VOZ ALTA"));
-  var carta=el("div",{class:"card",style:"background:#0D1525;border-radius:20px;border:1.5px solid "+ex.color+"35;padding:36px 28px;width:100%;"});
-  carta.appendChild(el("div",{style:"font-size:26px;font-weight:800;color:#F1F5F9;line-height:1.5;text-align:center;"},'"'+ex.phrases[state.phraseIdx]+'"'));
+
+  if(state.micError){
+    var errBox=el("div",{style:"margin:4px 16px 6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#FBBF24;line-height:1.6;"});
+    errBox.appendChild(el("div",{html:"⚠️ "+state.micError+" El cronómetro funciona sin micrófono."}));
+    errBox.appendChild(btn("🔄 Reintentar","display:block;margin-top:8px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.5);border-radius:8px;padding:7px 14px;color:#FBBF24;font-weight:800;font-size:12px;",function(){ startMic(function(){}); }));
+    wrap.appendChild(errBox);
+  }
+
+  // dots
+  var dots=el("div",{style:"display:flex;justify-content:center;align-items:center;gap:5px;padding:2px 20px 0;flex-wrap:wrap;"});
+  for(var i=0;i<REPS;i++){
+    dots.appendChild(el("div",{style:"border-radius:50%;background:"+(i<state.rep?ex.color:i===state.rep?"#F8FAFC":"rgba(255,255,255,0.1)")+";width:"+(i===state.rep?13:8)+"px;height:"+(i===state.rep?13:8)+"px;"}));
+  }
+  wrap.appendChild(dots);
+
+  var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:10px 18px 0;"});
+  if(!state.running && state.rep===0 && state.sec===0) body.appendChild(repStepperRow(ex));
+
+  // termómetro + datos (volumen y tiempo)
+  var rowTop=el("div",{style:"display:flex;gap:14px;align-items:stretch;"});
+  var thermo=el("div",{id:"thermo"});
+  thermo.innerHTML=thermometerSVG(state.reading?state.reading.db:null, state.settings.targetDb, state.micOn, state.running);
+  rowTop.appendChild(thermo);
+  var right=el("div",{style:"flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;"});
+  right.appendChild(el("div",{style:"font-size:11px;font-weight:800;color:"+ex.color+";letter-spacing:1.5px;"},"📢 DI LA FRASE EN VOZ ALTA"));
+  var dbRow=el("div",{id:"dbRow",style:"display:flex;align-items:baseline;gap:5px;"});
+  right.appendChild(dbRow);
+  var zoneLine=el("div",{id:"zoneLine",style:"font-size:14px;font-weight:900;letter-spacing:0.5px;min-height:18px;"});
+  right.appendChild(zoneLine);
+  var timerEl=el("div",{id:"timerEl",style:"font-size:38px;font-weight:900;letter-spacing:-2px;line-height:1;margin-top:2px;"});
+  right.appendChild(timerEl);
+  var metaLine=el("div",{id:"metaLine",style:"font-size:10px;letter-spacing:1.5px;font-weight:700;"});
+  right.appendChild(metaLine);
+  rowTop.appendChild(right);
+  body.appendChild(rowTop);
+  _liveNodes={thermo:thermo,dbRow:dbRow,zoneLine:zoneLine,noteLine:null,timerEl:timerEl,metaLine:metaLine,graph:null,pianoKeys:null,pianoActive:null};
+  updateLiveDOM();
+
+  // frase a leer
+  var carta=el("div",{class:"card",style:"margin-top:14px;background:#0D1525;border-radius:18px;border:1.5px solid "+ex.color+"40;padding:22px 20px;"});
+  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#F1F5F9;line-height:1.45;text-align:center;"},'"'+ex.phrases[state.rep]+'"'));
   body.appendChild(carta);
-  body.appendChild(el("div",{style:"margin-top:20px;font-size:13px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
+
+  if(!state.micOn && !state.micError){
+    body.appendChild(el("div",{style:"margin-top:10px;font-size:12px;color:#475569;text-align:center;line-height:1.7;"},"Toca ▶ INICIAR para medir tu volumen y tiempo mientras dices la frase en voz alta."));
+  }
+
+  // stats
+  var dbSoFar=state.dbLog.filter(Boolean);
+  if(state.repLog.length>0 || dbSoFar.length>0){
+    var stats=el("div",{style:"display:flex;gap:8px;margin-top:12px;width:100%;"});
+    if(state.repLog.length>0){
+      var avg=Math.round(state.repLog.reduce(function(a,b){return a+b;},0)/state.repLog.length);
+      var best=Math.max.apply(null,state.repLog);
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"PROM"),el("div",{style:"font-size:22px;font-weight:900;color:#F8FAFC;"},avg+"s")]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"MEJOR"),el("div",{style:"font-size:22px;font-weight:900;color:"+ex.color+";"},best+"s")]));
+    }
+    if(dbSoFar.length){
+      var maxDb=Math.max.apply(null,dbSoFar.map(function(d){return d.maxDb;}));
+      var pct=Math.round(dbSoFar.reduce(function(a,d){return a+(d.pctOnTarget||0);},0)/dbSoFar.length);
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"dB MÁX"),el("div",{style:"font-size:22px;font-weight:900;color:#10B981;"},String(maxDb))]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"% RANGO"),el("div",{style:"font-size:22px;font-weight:900;color:"+(pct>=50?"#10B981":"#F59E0B")+";"},pct+"%")]));
+    }
+    body.appendChild(stats);
+  }
   wrap.appendChild(body);
-  var foot=el("div",{style:"padding:0 20px 44px;"});
-  foot.appendChild(btn(isLast?"✓  Completar ejercicio":"Siguiente frase  ›", BIG_BTN+"background:"+ex.color+";", function(){
-    if(isLast){ recordExercise(ex.id,{type:"phrases",name:ex.name,reps:REPS}); finishEx(ex.id); }
-    else { state.phraseIdx++; render(); }
-  }));
+
+  // botón de acción
+  var foot=el("div",{style:"padding:14px 20px 44px;"});
+  if(!state.running){
+    foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  SIGUIENTE FRASE", BIG_BTN+"background:"+ex.color+";", tickStart));
+  } else {
+    foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:#10B981;border:2px solid #10B981;", repDone));
+  }
   wrap.appendChild(foot);
+  if(state.paused) wrap.appendChild(pauseOverlay());
   return wrap;
 }
 
@@ -833,6 +919,39 @@ function HistoryScreen(){
   return wrap;
 }
 
+/* ─────────── Piano reutilizable ─────────── */
+function buildPiano(activeMidi, whiteH){
+  whiteH=whiteH||138; var blackH=Math.round(whiteH*0.62);
+  var keys={};
+  var scroller=el("div",{style:"overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 4px;"});
+  var kb=el("div",{style:"display:flex;position:relative;width:max-content;margin:0 auto;"});
+  var WHITE_W=34, BLACK_W=21;
+  var blackSet={1:1,3:1,6:1,8:1,10:1};
+  for(var m=36;m<=76;m++){
+    if(blackSet[m%12]) continue;
+    var isActive=activeMidi===m;
+    var isDO=(m%12===0);
+    var container=el("div",{style:"position:relative;"});
+    (function(mm){
+      var whiteSpan=el("span",{style:"font-size:8.5px;font-weight:800;color:"+(isActive?"#fff":isDO?"#7C3AED":"#94A3B8")+";"}, (isDO||isActive)?midiName(mm):"");
+      var white=btn(whiteSpan,
+        "width:"+WHITE_W+"px;height:"+whiteH+"px;background:"+(isActive?"#A855F7":"#F1F5F9")+";border:1px solid #0B1120;border-radius:0 0 6px 6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;", function(){ playTone(mm); });
+      container.appendChild(white);
+      keys[mm]={btn:white,span:whiteSpan,isDO:isDO,black:false};
+      var nb=mm+1;
+      if(blackSet[nb%12]){
+        var blackActive=activeMidi===nb;
+        var black=btn("", "position:absolute;top:0;right:-"+(BLACK_W/2)+"px;width:"+BLACK_W+"px;height:"+blackH+"px;z-index:2;background:"+(blackActive?"#A855F7":"#0B1120")+";border:1px solid #000;border-radius:0 0 5px 5px;", function(e){ e.stopPropagation(); playTone(nb); });
+        container.appendChild(black);
+        keys[nb]={btn:black,black:true};
+      }
+    })(m);
+    kb.appendChild(container);
+  }
+  scroller.appendChild(kb);
+  return {node:scroller, keys:keys};
+}
+
 /* ─────────── Medidor / Piano ─────────── */
 function TunerScreen(){
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
@@ -888,35 +1007,10 @@ function TunerScreen(){
   wrap.appendChild(barWrap);
 
   // piano
-  var pianoKeys={};
   var pianoWrap=el("div",{style:"flex:1;display:flex;flex-direction:column;justify-content:center;"});
-  var scroller=el("div",{style:"overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 4px;"});
-  var kb=el("div",{style:"display:flex;position:relative;width:max-content;margin:0 auto;"});
-  var WHITE_W=34, BLACK_W=21;
-  var blackSet={1:1,3:1,6:1,8:1,10:1};
-  for(var m=36;m<=76;m++){
-    if(blackSet[m%12]) continue;
-    var isActive=activeMidi===m;
-    var isDO=(m%12===0);
-    var container=el("div",{style:"position:relative;"});
-    (function(mm){
-      var whiteSpan=el("span",{style:"font-size:8.5px;font-weight:800;color:"+(isActive?"#fff":isDO?"#7C3AED":"#94A3B8")+";"}, (isDO||isActive)?midiName(mm):"");
-      var white=btn(whiteSpan,
-        "width:"+WHITE_W+"px;height:138px;background:"+(isActive?"#A855F7":"#F1F5F9")+";border:1px solid #0B1120;border-radius:0 0 6px 6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;", function(){ playTone(mm); });
-      container.appendChild(white);
-      pianoKeys[mm]={btn:white,span:whiteSpan,isDO:isDO,black:false};
-      var nb=mm+1;
-      if(blackSet[nb%12]){
-        var blackActive=activeMidi===nb;
-        var black=btn("", "position:absolute;top:0;right:-"+(BLACK_W/2)+"px;width:"+BLACK_W+"px;height:86px;z-index:2;background:"+(blackActive?"#A855F7":"#0B1120")+";border:1px solid #000;border-radius:0 0 5px 5px;", function(e){ e.stopPropagation(); playTone(nb); });
-        container.appendChild(black);
-        pianoKeys[nb]={btn:black,black:true};
-      }
-    })(m);
-    kb.appendChild(container);
-  }
-  scroller.appendChild(kb);
-  pianoWrap.appendChild(scroller);
+  var piano=buildPiano(activeMidi, 138);
+  var pianoKeys=piano.keys;
+  pianoWrap.appendChild(piano.node);
 
   _tunerNodes={volCard:volCard,volNum:volNum,volLabel:volLabel,noteNum:noteNum,noteFreq:noteFreq,barFill:barFill,keys:pianoKeys,activeMidi:activeMidi};
 
