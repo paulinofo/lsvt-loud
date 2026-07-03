@@ -45,7 +45,7 @@ var EXERCISES = [
     zone:{min:34,max:43,mode:"below",label:"zona grave (SOL2−)"} },
   { id:3, name:"FRASES", label:"Ejercicio 4 · Voz funcional",
     instruction:"Di cada frase EN VOZ ALTA y FUERTE · Si sientes que exageras — ¡vas bien!",
-    reps:10, type:"phrases", color:"#F59E0B", emoji:"💬",
+    reps:5, type:"phrases", color:"#F59E0B", emoji:"💬",
     phrases:["Buenos días, ¿cómo estás hoy?","Muchas gracias por tu ayuda.","Con permiso, necesito pasar.",
       "Por favor, ¿me puedes escuchar?","Quiero hablar con voz fuerte y clara.","Hoy es un buen día para practicar.",
       "¿Puedes repetir lo que dijiste?","Necesito agua, ¿hay por favor?","Me siento bien y con energía.",
@@ -75,6 +75,8 @@ function saveSettings(s){ try{ localStorage.setItem(LS_SET, JSON.stringify(s)); 
 
 // Repeticiones efectivas (con override guardado por el usuario)
 function exReps(ex){ var r=state.settings.reps[ex.id]; return (r!=null)?r:ex.reps; }
+// Total de repeticiones a realizar. Para frases: ciclos × nº de frases (10).
+function exTotal(ex){ return (ex.type==="phrases")?(exReps(ex)*ex.phrases.length):exReps(ex); }
 function setReps(ex, val){
   var min=1, max=(ex.type==="phrases")?ex.phrases.length:30;
   state.settings.reps[ex.id]=clamp(val, min, max);
@@ -82,7 +84,7 @@ function setReps(ex, val){
 }
 function repStepperRow(ex){
   var REPS=exReps(ex);
-  var lbl=(ex.type==="phrases")?"Frases":"Repeticiones";
+  var lbl=(ex.type==="phrases")?"Ciclos":"Repeticiones";
   var bs="width:40px;height:40px;border-radius:11px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);color:#F1F5F9;font-size:23px;font-weight:800;line-height:1;flex-shrink:0;";
   return el("div",{style:"display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:6px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;"},[
     el("div",{style:"font-size:11px;letter-spacing:1.5px;color:#64748B;font-weight:700;text-transform:uppercase;"}, lbl),
@@ -109,6 +111,7 @@ var state = {
   sessionId:null,
   timer:null,
   paused:false, restSec:0, restTimer:null,
+  gap:0, gapTimer:null, waterAuto:false,
   // audio
   micOn:false, micError:null, reading:null,
   audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
@@ -386,13 +389,42 @@ function resumeSession(){
   if(!state.paused) return;
   state.paused=false;
   if(state.restTimer){ clearInterval(state.restTimer); state.restTimer=null; }
+  if(state.waterAuto){ state.waterAuto=false; phraseNext(); return; }  // pausa de agua de frases → continúa solo
   if(state.running){   // si estaba corriendo una rep, reanuda el cronómetro donde quedó
     if(state.timer) clearInterval(state.timer);
     state.timer=setInterval(function(){ state.sec++; updateTimer(); }, 1000);
   }
   render();
 }
-function clearPause(){ if(state.restTimer){ clearInterval(state.restTimer); state.restTimer=null; } state.paused=false; }
+function clearPause(){
+  if(state.restTimer){ clearInterval(state.restTimer); state.restTimer=null; }
+  if(state.gapTimer){ clearInterval(state.gapTimer); state.gapTimer=null; }
+  state.paused=false; state.gap=0; state.waterAuto=false;
+}
+
+/* ─────────── Frases: pausa de 3s entre frases + auto-avance ─────────── */
+var _gapNode=null;
+function phraseNext(){ state.rep++; state.sec=0; tickStart(); }   // siguiente frase y arranca medición sola
+function startWaterBreak(){ state.waterAuto=true; pauseSession(); } // pausa de agua; al reanudar continúa
+function startPhraseGap(){
+  state.gap=3;
+  if(state.gapTimer) clearInterval(state.gapTimer);
+  state.gapTimer=setInterval(function(){
+    state.gap--;
+    if(state.gap<=0){ clearInterval(state.gapTimer); state.gapTimer=null; state.gap=0; phraseNext(); }
+    else if(_gapNode){ _gapNode.textContent=String(state.gap); }
+  }, 1000);
+  render();
+}
+function gapOverlay(){
+  var ov=el("div",{style:"position:fixed;inset:0;z-index:55;background:rgba(6,11,24,0.92);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
+  ov.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;",class:"card"},"👏"));
+  ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:4px;color:#F59E0B;text-transform:uppercase;margin-bottom:8px;font-weight:800;"},"Cambia de frase"));
+  var n=el("div",{style:"font-size:76px;font-weight:900;letter-spacing:-2px;color:#F59E0B;line-height:1;margin:6px 0 12px;"},String(state.gap||3));
+  _gapNode=n; ov.appendChild(n);
+  ov.appendChild(el("div",{style:"font-size:14px;color:#64748B;line-height:1.6;"},"Respira. La siguiente frase empieza sola."));
+  return ov;
+}
 function pauseOverlay(){
   var ov=el("div",{style:"position:fixed;inset:0;z-index:60;background:rgba(6,11,24,0.94);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
   ov.appendChild(el("div",{style:"font-size:80px;line-height:1;margin-bottom:14px;",class:"card"},"💧"));
@@ -433,7 +465,7 @@ function repDone(){
       avgHz:hz.length?hz.reduce(function(a,b){return a+b;},0)/hz.length:0 };
   }
   state.dbLog.push(audio);
-  if(state.rep+1>=exReps(ex)){
+  if(state.rep+1>=exTotal(ex)){
     var avg=Math.round(state.repLog.reduce(function(a,b){return a+b;},0)/state.repLog.length);
     var best=Math.max.apply(null,state.repLog);
     var stats={type:ex.type,name:ex.name,reps:state.repLog.length,avg:avg,best:best};
@@ -455,6 +487,11 @@ function repDone(){
     stats.scores=exerciseScores(ex, stats);
     recordExercise(ex.id, stats);
     finishEx(ex.id);
+  } else if(ex.type==="phrases"){
+    // Frases: al terminar cada frase, ¿toca pausa de agua (tras ciclo 2) o pausa de 3s + auto-avance?
+    var perCycle=ex.phrases.length;               // 10
+    if(state.rep+1 === 2*perCycle){ startWaterBreak(); }   // acaba de completar el 2º ciclo (frase 20)
+    else { startPhraseGap(); }                             // 3s y avanza sola
   } else {
     state.rep++; state.sec=0; render();
   }
@@ -518,7 +555,7 @@ function HomeScreen(){
       el("div",{style:"flex:1;min-width:0;"},[
         el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(isDone?e.color:"#475569")+";text-transform:uppercase;margin-bottom:2px;"},e.label),
         el("div",{style:"font-size:18px;font-weight:800;line-height:1.1;"},e.name),
-        el("div",{style:"font-size:12px;color:#475569;margin-top:3px;"}, e.type==="sustain"?(exReps(e)+" reps · meta "+e.target+"s"):e.type==="phrases"?(exReps(e)+" frases"):"1 párrafo")
+        el("div",{style:"font-size:12px;color:#475569;margin-top:3px;"}, e.type==="sustain"?(exReps(e)+" reps · meta "+e.target+"s"):e.type==="phrases"?(exReps(e)+" ciclos · "+exTotal(e)+" frases"):"1 párrafo")
       ]),
       rightEl
     ], "display:flex;align-items:center;gap:14px;background:"+(isDone?e.color+"10":"#0D1525")+";border:1.5px solid "+(isDone?e.color+"55":"rgba(255,255,255,0.06)")+";border-radius:18px;padding:14px 16px;color:#F1F5F9;width:100%;text-align:left;", function(){ openEx(i); });
@@ -786,13 +823,16 @@ function updateTimer(){ if(_liveNodes.timerEl){ var ex=EXERCISES[state.exIdx]; v
 /* ─────────── Frases ─────────── */
 function PhraseScreen(){
   var ex=EXERCISES[state.exIdx];
-  var REPS=exReps(ex);
+  var perCycle=ex.phrases.length;                 // 10 frases por ciclo
+  var cycles=exReps(ex);                           // nº de ciclos (editable, default 5)
+  var cycleNum=Math.floor(state.rep/perCycle)+1;
+  var idxInCycle=state.rep % perCycle;
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
 
   // header
   var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 8px;"});
   header.appendChild(btn("‹",BACK_BTN,goHome));
-  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#475569;"},"Frase "+(state.rep+1)+" de "+REPS)]));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#475569;"},"Ciclo "+cycleNum+"/"+cycles+" · Frase "+(idxInCycle+1)+"/"+perCycle)]));
   header.appendChild(btn([el("span",{style:"font-size:15px;"},"⏸"),el("span",{style:"font-size:13px;font-weight:800;margin-left:4px;"},"💧")],
     "background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.55);border-radius:12px;padding:8px 11px;color:#3B82F6;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;", pauseSession));
   header.appendChild(btn(state.micOn?"🎤 ON":"🎤 Medir",
@@ -809,8 +849,8 @@ function PhraseScreen(){
 
   // dots
   var dots=el("div",{style:"display:flex;justify-content:center;align-items:center;gap:5px;padding:2px 20px 0;flex-wrap:wrap;"});
-  for(var i=0;i<REPS;i++){
-    dots.appendChild(el("div",{style:"border-radius:50%;background:"+(i<state.rep?ex.color:i===state.rep?"#F8FAFC":"rgba(255,255,255,0.1)")+";width:"+(i===state.rep?13:8)+"px;height:"+(i===state.rep?13:8)+"px;"}));
+  for(var i=0;i<perCycle;i++){
+    dots.appendChild(el("div",{style:"border-radius:50%;background:"+(i<idxInCycle?ex.color:i===idxInCycle?"#F8FAFC":"rgba(255,255,255,0.1)")+";width:"+(i===idxInCycle?13:8)+"px;height:"+(i===idxInCycle?13:8)+"px;"}));
   }
   wrap.appendChild(dots);
 
@@ -839,7 +879,7 @@ function PhraseScreen(){
 
   // frase a leer
   var carta=el("div",{class:"card",style:"margin-top:14px;background:#0D1525;border-radius:18px;border:1.5px solid "+ex.color+"40;padding:22px 20px;"});
-  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#F1F5F9;line-height:1.45;text-align:center;"},'"'+ex.phrases[state.rep]+'"'));
+  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#F1F5F9;line-height:1.45;text-align:center;"},'"'+ex.phrases[idxInCycle]+'"'));
   body.appendChild(carta);
 
   if(!state.micOn && !state.micError){
@@ -869,12 +909,13 @@ function PhraseScreen(){
   // botón de acción
   var foot=el("div",{style:"padding:14px 20px 44px;"});
   if(!state.running){
-    foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  SIGUIENTE FRASE", BIG_BTN+"background:"+ex.color+";", tickStart));
+    foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  CONTINUAR", BIG_BTN+"background:"+ex.color+";", tickStart));
   } else {
     foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:#10B981;border:2px solid #10B981;", repDone));
   }
   wrap.appendChild(foot);
   if(state.paused) wrap.appendChild(pauseOverlay());
+  if(state.gap>0) wrap.appendChild(gapOverlay());
   return wrap;
 }
 
