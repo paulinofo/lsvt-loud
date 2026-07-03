@@ -56,6 +56,15 @@ var EXERCISES = [
     text:"La resiliencia no es la ausencia de dificultades, sino la fuerza para crecer a través de ellas. Como el bambú que se dobla con el viento sin quebrarse, quien se adapta encuentra firmeza donde otros solo ven obstáculos. Adaptarse al cambio no es rendirse ante él, sino aprender su lenguaje. El río no lucha contra la roca: la rodea con paciencia, la pule y sigue su camino hacia el mar. Así, una mente flexible convierte cada revés en una lección y cada caída en un nuevo punto de partida. La superación empieza con un solo paso y con una sola voz que se atreve a decir: puedo intentarlo otra vez. No importa cuántas veces caigamos, sino cuántas elegimos levantarnos. La verdadera fortaleza no está en no doblarse jamás, sino en volver a erguirse, más sabios y más serenos, después de cada tormenta. Cada día es una nueva oportunidad para reinventarnos, para hablar con claridad y avanzar con valentía hacia aquello que soñamos." }
 ];
 
+/* ─────────── Lecturas rotativas (superación / resiliencia / adaptabilidad) ─────────── */
+var READINGS=[
+  {titulo:"Resiliencia y adaptación", texto:"La resiliencia no es la ausencia de dificultades, sino la fuerza para crecer a través de ellas. Como el bambú que se dobla con el viento sin quebrarse, quien se adapta encuentra firmeza donde otros solo ven obstáculos. Adaptarse al cambio no es rendirse ante él, sino aprender su lenguaje. El río no lucha contra la roca: la rodea con paciencia, la pule y sigue su camino hacia el mar. Así, una mente flexible convierte cada revés en una lección y cada caída en un nuevo punto de partida. La superación empieza con un solo paso y con una sola voz que se atreve a decir: puedo intentarlo otra vez. No importa cuántas veces caigamos, sino cuántas elegimos levantarnos. La verdadera fortaleza no está en no doblarse jamás, sino en volver a erguirse, más sabios y más serenos, después de cada tormenta."},
+  {titulo:"El viento del cambio", texto:"El mundo cambia sin pedir permiso, y con él debemos aprender a movernos. Adaptarse no significa perder quiénes somos, sino descubrir nuevas formas de seguir siendo nosotros mismos. Las especies que sobreviven no son las más fuertes ni las más rápidas, sino las que mejor responden al cambio. Lo mismo ocurre con las personas: quien abraza lo nuevo con curiosidad encuentra puertas donde otros ven muros. Cada final esconde un comienzo, y cada camino cerrado nos invita a trazar uno propio. Cuando sopla el viento del cambio, algunos construyen muros y otros construyen molinos. Elijamos crear, aprender y crecer, convencidos de que nuestra mayor fortaleza es la capacidad de reinventarnos una y otra vez."},
+  {titulo:"El arte de superarse", texto:"Toda gran conquista comenzó como un pequeño intento. Nadie nace sabiendo caminar, hablar o vencer sus miedos; todo se aprende paso a paso, con paciencia y constancia. La superación no es un destino, sino un camino que recorremos cada día al elegir ser un poco mejores que ayer. Habrá tropiezos, dudas y cansancio, pero cada esfuerzo deja una huella y cada práctica nos acerca a la meta. Confía en tu voz, en tu cuerpo y en tu mente, porque dentro de ti habita una fuerza capaz de sorprenderte. Levántate, respira hondo y da el siguiente paso: el progreso pertenece a quienes se atreven a intentarlo."},
+  {titulo:"Gota a gota", texto:"La perseverancia es el arte de continuar cuando todo invita a detenerse. El agua, gota a gota, perfora la piedra más dura; no por su fuerza, sino por su constancia. Así también nosotros alcanzamos lo que parecía imposible: con repetición, disciplina y paciencia. Los grandes logros rara vez llegan de golpe; se construyen con pequeños pasos sostenidos en el tiempo. Cuando sientas que avanzas despacio, recuerda que incluso el paso más lento te acerca, mientras que rendirse te aleja para siempre. Sigue adelante con calma y determinación, porque la meta no es de quien corre más rápido, sino de quien nunca deja de caminar."},
+  {titulo:"La actitud lo cambia todo", texto:"La actitud con la que enfrentamos la vida transforma por completo lo que vivimos. No podemos elegir todas las circunstancias, pero siempre podemos elegir cómo responder a ellas. Una sonrisa, una palabra amable o un pensamiento esperanzador tienen el poder de cambiar un día entero. El optimismo no ignora las dificultades: las mira de frente y decide buscar una salida. Cada mañana es una página en blanco esperando ser escrita con valentía y entusiasmo. Cuida tus pensamientos, alimenta tu esperanza y habla con fuerza y claridad, porque quien cree en sí mismo ya ha dado el primer paso hacia el éxito."}
+];
+
 /* ─────────── Utilidades ─────────── */
 function pad(n){ return (n<10?"0":"")+n; }
 function fmtTime(s){ return pad(Math.floor(s/60))+":"+pad(s%60); }
@@ -112,7 +121,8 @@ var state = {
   timer:null,
   paused:false, restSec:0, restTimer:null,
   gap:0, gapTimer:null, waterAuto:false,
-  readSec:300, readTimer:null, readRunning:false,
+  readSec:300, readTimer:null, readRunning:false, readText:null,
+  recorder:null, recChunks:[], recBlob:null, recURL:null, recMime:"", recording:false, recStarted:false, recUnsupported:false,
   // audio
   micOn:false, micError:null, reading:null,
   audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
@@ -357,7 +367,7 @@ var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#475569;text-transform:
 
 /* ─────────── Navegación ─────────── */
 function go(screen){ if(screen==="home"||screen==="history"){ if(state.micOn) stopMic(); } state.screen=screen; render(); }
-function openEx(i){ clearPause(); clearRead(); state.readSec=300; state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
+function openEx(i){ clearPause(); clearRead(); state.readSec=300; if(EXERCISES[i].type==="reading") state.readText=nextReading(); state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
 function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} clearPause(); clearRead(); state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
 function newSession(){ if(state.micOn) stopMic(); clearRead(); state.done={}; state.sessionId=null; state.screen="home"; render(); }
 
@@ -923,21 +933,88 @@ function PhraseScreen(){
 
 /* ─────────── Lectura ─────────── */
 var _readNode=null;
+function nextReading(){
+  var idx=0; try{ idx=parseInt(localStorage.getItem("lsvt-readIdx")||"0",10)||0; }catch(e){}
+  idx=((idx%READINGS.length)+READINGS.length)%READINGS.length;
+  try{ localStorage.setItem("lsvt-readIdx", String((idx+1)%READINGS.length)); }catch(e){}
+  return READINGS[idx];
+}
 function readStart(){
   if(state.readRunning || state.readSec<=0) return;
-  state.readRunning=true;
-  if(state.readTimer) clearInterval(state.readTimer);
-  state.readTimer=setInterval(function(){
-    state.readSec--;
-    if(state.readSec<=0){ state.readSec=0; clearRead(); render(); return; }
-    if(_readNode) _readNode.textContent=fmtTime(state.readSec);
-  }, 1000);
-  render();
+  releaseRec();
+  function begin(){
+    state.readRunning=true;
+    if(state.readTimer) clearInterval(state.readTimer);
+    state.readTimer=setInterval(function(){
+      state.readSec--;
+      if(state.readSec<=0){ state.readSec=0; stopReading(); return; }
+      if(_readNode) _readNode.textContent=fmtTime(state.readSec);
+    }, 1000);
+    render();
+  }
+  if(!state.micOn){ startMic(function(ok){ if(ok) startReadRecording(); begin(); }); }
+  else { startReadRecording(); begin(); }
 }
-function clearRead(){ if(state.readTimer){ clearInterval(state.readTimer); state.readTimer=null; } state.readRunning=false; }
+function stopReading(){
+  if(state.readTimer){ clearInterval(state.readTimer); state.readTimer=null; }
+  state.readRunning=false;
+  if(state.recording && state.recorder){ try{ state.recorder.stop(); }catch(e){ state.recording=false; render(); } }
+  else render();
+}
+function startReadRecording(){
+  try{
+    if(typeof MediaRecorder==="undefined"){ state.recUnsupported=true; return; }
+    if(!state.stream) return;
+    var opts={}, types=["audio/mp4","audio/webm;codecs=opus","audio/webm"];
+    for(var i=0;i<types.length;i++){ if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(types[i])){ opts.mimeType=types[i]; break; } }
+    state.recChunks=[];
+    state.recorder = opts.mimeType ? new MediaRecorder(state.stream, opts) : new MediaRecorder(state.stream);
+    state.recMime = state.recorder.mimeType || opts.mimeType || "audio/webm";
+    state.recorder.ondataavailable=function(e){ if(e.data && e.data.size>0) state.recChunks.push(e.data); };
+    state.recorder.onstop=function(){
+      try{ state.recBlob=new Blob(state.recChunks,{type:state.recMime}); state.recURL=URL.createObjectURL(state.recBlob); }catch(e){}
+      state.recording=false; render();
+    };
+    state.recorder.start(1000);
+    state.recording=true; state.recStarted=true;
+  }catch(e){ state.recording=false; state.recorder=null; }
+}
+function releaseRec(){
+  if(state.recURL){ try{ URL.revokeObjectURL(state.recURL); }catch(e){} }
+  state.recorder=null; state.recChunks=[]; state.recBlob=null; state.recURL=null; state.recMime=""; state.recording=false; state.recStarted=false; state.recUnsupported=false;
+}
+function clearRead(){
+  if(state.readTimer){ clearInterval(state.readTimer); state.readTimer=null; }
+  state.readRunning=false;
+  if(state.recorder){ try{ if(state.recorder.state!=="inactive") state.recorder.stop(); }catch(e){} }
+  releaseRec();
+}
+function readFileName(){
+  var ext=(state.recMime.indexOf("mp4")>=0||state.recMime.indexOf("aac")>=0)?"m4a":"webm";
+  var d=new Date();
+  return "lectura-lsvt-"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"-"+pad(d.getHours())+pad(d.getMinutes())+"."+ext;
+}
+function shareReadRecording(){
+  if(!state.recBlob) return;
+  var fname=readFileName();
+  try{
+    var file=new File([state.recBlob], fname, {type:state.recMime});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file], title:"Lectura LSVT LOUD", text:"Grabación de mi ejercicio de lectura en voz alta (LSVT LOUD)."}).catch(function(){});
+      return;
+    }
+  }catch(e){}
+  downloadReadRecording();
+}
+function downloadReadRecording(){
+  if(!state.recURL) return;
+  var a=document.createElement("a"); a.href=state.recURL; a.download=readFileName();
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
 
 function ReadScreen(){
   var ex=EXERCISES[state.exIdx];
+  var lect=state.readText || {titulo:"Resiliencia y adaptación", texto:ex.text};
   var running=state.readRunning, done=(state.readSec<=0);
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
   var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 10px;"});
@@ -945,28 +1022,42 @@ function ReadScreen(){
   header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"LECTURA EN VOZ ALTA"),el("div",{style:"font-size:14px;color:#475569;"},"Lee en voz alta durante 5 minutos")]));
   wrap.appendChild(header);
 
-  // cronómetro regresivo (5:00)
+  // cronómetro regresivo (5:00) + grabación
   var timeColor = done?"#10B981":(running?"#F59E0B":"#64748B");
   var tbox=el("div",{style:"text-align:center;padding:2px 20px 8px;"});
   tbox.appendChild(el("div",{style:"font-size:10px;letter-spacing:2px;color:#475569;text-transform:uppercase;margin-bottom:2px;"},"Cuenta regresiva"));
   var t=el("div",{style:"font-size:54px;font-weight:900;letter-spacing:-2px;line-height:1;color:"+timeColor+";"},fmtTime(state.readSec));
   _readNode=t; tbox.appendChild(t);
-  if(!running && !done) tbox.appendChild(btn("▶  Comenzar","margin-top:12px;border:none;border-radius:14px;padding:12px 32px;font-size:15px;font-weight:800;color:#fff;background:"+ex.color+";",readStart));
-  else if(running) tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#F59E0B;font-weight:800;"},"● Leyendo… ¡mantén la voz FUERTE!"));
+  if(!running && !state.recStarted) tbox.appendChild(btn("▶  Comenzar y grabar","margin-top:12px;border:none;border-radius:14px;padding:12px 30px;font-size:15px;font-weight:800;color:#fff;background:"+ex.color+";",readStart));
+  else if(running) tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#EF4444;font-weight:800;"},(state.recording?"🔴 Grabando… ":"")+"¡mantén la voz FUERTE!"));
   else if(done) tbox.appendChild(el("div",{style:"margin-top:8px;font-size:14px;color:#10B981;font-weight:900;"},"✓ ¡Tiempo completado!"));
   wrap.appendChild(tbox);
 
   var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:0 20px;"});
   body.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";margin-bottom:12px;font-weight:700;text-align:center;"},"📖 IMAGINA HABLARLE A ALGUIEN A 3 METROS"));
   var carta=el("div",{style:"background:#0D1525;border-radius:20px;border:1.5px solid "+ex.color+"30;padding:22px 22px;"});
-  carta.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";text-transform:uppercase;font-weight:800;margin-bottom:12px;text-align:center;"},"Resiliencia y adaptación"));
-  carta.appendChild(el("div",{style:"font-size:19px;color:#CBD5E1;line-height:1.9;text-align:justify;"},ex.text));
+  carta.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";text-transform:uppercase;font-weight:800;margin-bottom:12px;text-align:center;"},lect.titulo));
+  carta.appendChild(el("div",{style:"font-size:19px;color:#CBD5E1;line-height:1.9;text-align:justify;"},lect.texto));
   body.appendChild(carta);
   body.appendChild(el("div",{style:"margin-top:14px;font-size:13px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
   wrap.appendChild(body);
 
-  var foot=el("div",{style:"padding:18px 20px 44px;"});
-  foot.appendChild(btn("✓  Lectura completa", BIG_BTN+"background:"+(done?"#10B981":ex.color)+";", function(){ clearRead(); recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
+  var foot=el("div",{style:"padding:16px 20px 44px;"});
+  if(running){
+    foot.appendChild(btn("⏹  Terminar y guardar", BIG_BTN+"background:#EF4444;", stopReading));
+  } else if(state.recStarted && !state.recBlob){
+    foot.appendChild(el("div",{style:"text-align:center;color:#64748B;font-size:14px;padding:10px;"},"Preparando la grabación…"));
+  } else if(state.recBlob){
+    if(state.recURL) foot.appendChild(el("audio",{src:state.recURL,controls:"controls",style:"width:100%;margin-bottom:12px;"}));
+    foot.appendChild(btn("📤  Enviar al médico (WhatsApp)", BIG_BTN+"background:#25D366;color:#04310f;", shareReadRecording));
+    var row=el("div",{style:"display:flex;gap:10px;margin-top:10px;"});
+    row.appendChild(btn("⬇ Descargar", "flex:1;border:1.5px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px;font-size:14px;font-weight:800;color:#F1F5F9;background:#0D1525;", downloadReadRecording));
+    row.appendChild(btn("✓ Completar", "flex:1;border:none;border-radius:16px;padding:14px;font-size:14px;font-weight:800;color:#fff;background:"+ex.color+";", function(){ recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
+    foot.appendChild(row);
+  } else {
+    if(state.recUnsupported) foot.appendChild(el("div",{style:"text-align:center;color:#FBBF24;font-size:12px;margin-bottom:10px;line-height:1.5;"},"⚠️ La grabación no está disponible en este navegador. Abre la app en Safari."));
+    foot.appendChild(btn("✓  Lectura completa (sin grabar)", BIG_BTN+"background:#0D1525;border:1.5px solid rgba(255,255,255,0.12);", function(){ recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
+  }
   wrap.appendChild(foot);
   return wrap;
 }
