@@ -112,7 +112,7 @@ var state = {
   // audio
   micOn:false, micError:null, reading:null,
   audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
-  history:[], repSamples:{db:[],hz:[]}
+  history:[], repSamples:{db:[],hz:[],zin:0,ztot:0}
 };
 
 var app = document.getElementById("app");
@@ -219,7 +219,11 @@ function startMic(cb){
         if(state.history.length>110) state.history.shift();
         if(state.running && !state.paused){
           if(db>=55) state.repSamples.db.push(db);
-          if(s.voiced && s.freq>0) state.repSamples.hz.push(s.freq);
+          if(s.voiced && s.freq>0){
+            state.repSamples.hz.push(s.freq);
+            var ez=EXERCISES[state.exIdx].zone;
+            if(ez){ state.repSamples.ztot++; if(inZone(s.mf,ez)) state.repSamples.zin++; }
+          }
         }
         updateLive();
       }
@@ -267,6 +271,58 @@ function pitchStatus(mf, z){
   if(mf<z.min) return {ok:false,txt:"⬇ muy grave"};
   if(mf>z.max) return {ok:false,txt:"⬆ muy agudo"};
   return {ok:true,txt:"✓ normal"};
+}
+function inZone(mf, z){
+  if(mf==null||!z) return false;
+  if(z.mode==="above") return mf>=z.min;
+  if(z.mode==="below") return mf<=z.max;
+  return mf>=z.min && mf<=z.max;
+}
+
+/* ─────────── Calificación (0–100 + etiqueta) ─────────── */
+function scoreLabel(s){
+  if(s==null) return {txt:"—",color:"#475569"};
+  if(s>=85) return {txt:"Excelente",color:"#10B981"};
+  if(s>=70) return {txt:"Muy bien",color:"#22C55E"};
+  if(s>=50) return {txt:"Bien",color:"#F59E0B"};
+  if(s>=30) return {txt:"Sigue practicando",color:"#F97316"};
+  return {txt:"A mejorar",color:"#EF4444"};
+}
+// Puntajes de un ejercicio a partir de sus stats
+function exerciseScores(ex, stats){
+  var sc={intensidad:null,tono:null,esfuerzo:null,overall:null};
+  if(stats.pctDb!=null) sc.intensidad=clamp(stats.pctDb,0,100);
+  if(ex.zone && stats.tonePct!=null) sc.tono=clamp(stats.tonePct,0,100);
+  if(ex.type==="sustain" && ex.target && stats.avg!=null) sc.esfuerzo=clamp(Math.round(stats.avg/ex.target*100),0,100);
+  else if(stats.pctDb!=null) sc.esfuerzo=clamp(stats.pctDb,0,100); // frases: decir todas en voz alta
+  var parts=[sc.intensidad,sc.tono,sc.esfuerzo].filter(function(v){return v!=null;});
+  sc.overall=parts.length?Math.round(parts.reduce(function(a,b){return a+b;},0)/parts.length):null;
+  return sc;
+}
+// Agrega los puntajes de una sesión (objeto exercises)
+function aggScores(exs){
+  var d={intensidad:[],tono:[],esfuerzo:[],overall:[]};
+  for(var k in exs){ var s=exs[k]&&exs[k].scores; if(s){
+    ["intensidad","tono","esfuerzo","overall"].forEach(function(dim){ if(s[dim]!=null) d[dim].push(s[dim]); });
+  }}
+  function avg(a){ return a.length?Math.round(a.reduce(function(x,y){return x+y;},0)/a.length):null; }
+  return {intensidad:avg(d.intensidad),tono:avg(d.tono),esfuerzo:avg(d.esfuerzo),overall:avg(d.overall)};
+}
+function currentSessionExercises(){
+  for(var i=0;i<state.log.length;i++){ if(state.log[i].id===state.sessionId) return state.log[i].exercises||{}; }
+  return state.log.length?(state.log[state.log.length-1].exercises||{}):{};
+}
+function scoreDimRow(label, val){
+  var lab=scoreLabel(val);
+  var row=el("div",{style:"display:flex;align-items:center;gap:10px;margin-bottom:9px;"});
+  row.appendChild(el("div",{style:"width:80px;text-align:left;font-size:12px;color:#94A3B8;font-weight:700;"},label));
+  var barBg=el("div",{style:"flex:1;height:9px;background:#0F1829;border-radius:99px;overflow:hidden;"});
+  barBg.appendChild(el("div",{style:"height:100%;width:"+(val!=null?val:0)+"%;background:"+lab.color+";border-radius:99px;transition:width .5s ease;"}));
+  row.appendChild(barBg);
+  row.appendChild(el("div",{style:"width:52px;text-align:right;"},[
+    el("span",{style:"font-size:15px;font-weight:900;color:"+lab.color+";"}, val!=null?String(val):"—")
+  ]));
+  return row;
 }
 
 /* ─────────── Helpers DOM ─────────── */
@@ -355,7 +411,7 @@ function tickStart(){
   // Pedir micrófono PRIMERO, aún dentro del gesto del toque (clave en iOS).
   if(!state.micOn){ startMic(function(){}); }
   state.sec=0; state.running=true;
-  state.repSamples={db:[],hz:[]}; state.history=[];
+  state.repSamples={db:[],hz:[],zin:0,ztot:0}; state.history=[];
   if(state.timer) clearInterval(state.timer);
   state.timer=setInterval(function(){ state.sec++; updateTimer(); }, 1000);
   render();
@@ -371,6 +427,7 @@ function repDone(){
     audio={ avgDb:Math.round(db.reduce(function(a,b){return a+b;},0)/db.length),
       maxDb:Math.max.apply(null,db),
       pctOnTarget:Math.round(onTarget/db.length*100),
+      tonePct:state.repSamples.ztot?Math.round(state.repSamples.zin/state.repSamples.ztot*100):null,
       minHz:hz.length?Math.min.apply(null,hz):0,
       maxHz:hz.length?Math.max.apply(null,hz):0,
       avgHz:hz.length?hz.reduce(function(a,b){return a+b;},0)/hz.length:0 };
@@ -389,10 +446,13 @@ function repDone(){
       var mins=wa.map(function(r){return r.minHz;}).filter(function(v){return v>0;});
       var maxs=wa.map(function(r){return r.maxHz;}).filter(function(v){return v>0;});
       var avgs=wa.map(function(r){return r.avgHz;}).filter(function(v){return v>0;});
+      var tps=wa.map(function(r){return r.tonePct;}).filter(function(v){return v!=null;});
+      if(tps.length) stats.tonePct=Math.round(tps.reduce(function(a,b){return a+b;},0)/tps.length);
       if(ex.pitchRole==="max"&&maxs.length){ var h=Math.max.apply(null,maxs); stats.pitch={note:hzToNote(h),hz:Math.round(h)}; }
       else if(ex.pitchRole==="min"&&mins.length){ var h2=Math.min.apply(null,mins); stats.pitch={note:hzToNote(h2),hz:Math.round(h2)}; }
       else if(ex.pitchRole&&avgs.length){ var h3=avgs.reduce(function(a,b){return a+b;},0)/avgs.length; stats.pitch={note:hzToNote(h3),hz:Math.round(h3)}; }
     }
+    stats.scores=exerciseScores(ex, stats);
     recordExercise(ex.id, stats);
     finishEx(ex.id);
   } else {
@@ -443,8 +503,16 @@ function HomeScreen(){
   wrap.appendChild(nav);
 
   var list=el("div",{style:"padding:0 16px;display:flex;flex-direction:column;gap:10px;"});
+  var sess=currentSessionExercises();
   EXERCISES.forEach(function(e,i){
     var isDone=!!state.done[e.id];
+    var sc=(isDone && sess[e.id] && sess[e.id].scores)?sess[e.id].scores:null;
+    var rightEl=(sc && sc.overall!=null)
+      ? el("div",{style:"flex-shrink:0;text-align:center;min-width:30px;"},[
+          el("div",{style:"font-size:20px;font-weight:900;line-height:1;color:"+scoreLabel(sc.overall).color+";"},String(sc.overall)),
+          el("div",{style:"font-size:8px;color:#475569;letter-spacing:0.5px;"},"pts")
+        ])
+      : el("div",{style:"font-size:20px;color:#1E293B;"},"›");
     var row=btn([
       el("div",{style:"width:46px;height:46px;border-radius:50%;flex-shrink:0;background:"+(isDone?e.color:"rgba(255,255,255,0.04)")+";border:"+(isDone?"none":"1.5px solid rgba(255,255,255,0.1)")+";display:flex;align-items:center;justify-content:center;font-size:"+(isDone?21:19)+"px;color:"+(isDone?"#fff":"#64748B")+";font-weight:700;"}, isDone?"✓":e.emoji),
       el("div",{style:"flex:1;min-width:0;"},[
@@ -452,7 +520,7 @@ function HomeScreen(){
         el("div",{style:"font-size:18px;font-weight:800;line-height:1.1;"},e.name),
         el("div",{style:"font-size:12px;color:#475569;margin-top:3px;"}, e.type==="sustain"?(exReps(e)+" reps · meta "+e.target+"s"):e.type==="phrases"?(exReps(e)+" frases"):"1 párrafo")
       ]),
-      el("div",{style:"font-size:20px;color:#1E293B;"},"›")
+      rightEl
     ], "display:flex;align-items:center;gap:14px;background:"+(isDone?e.color+"10":"#0D1525")+";border:1.5px solid "+(isDone?e.color+"55":"rgba(255,255,255,0.06)")+";border-radius:18px;padding:14px 16px;color:#F1F5F9;width:100%;text-align:left;", function(){ openEx(i); });
     row.className="card"; row.style.animationDelay=(i*0.05)+"s";
     list.appendChild(row);
@@ -833,12 +901,25 @@ function ReadScreen(){
 
 /* ─────────── Completado ─────────── */
 function DoneScreen(){
-  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;align-items:center;justify-content:center;text-align:center;padding:40px 32px;"});
-  wrap.appendChild(el("div",{style:"font-size:84px;line-height:1;margin-bottom:24px;"},"🎉"));
-  wrap.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#10B981;margin-bottom:10px;text-transform:uppercase;"},"Sesión completada"));
-  wrap.appendChild(el("div",{style:"font-size:32px;font-weight:900;color:#F8FAFC;line-height:1.15;margin-bottom:18px;"},"¡Excelente trabajo hoy!"));
-  wrap.appendChild(el("div",{style:"font-size:15px;color:#64748B;line-height:2;margin-bottom:14px;",html:"Completaste los "+EXERCISES.length+" ejercicios.<br><span style='color:#3B82F6;font-weight:700;'>✓ Sesión guardada en tu iPhone</span><br><span style='color:#10B981;font-weight:800;'>¡PIENSA SIEMPRE EN VOZ ALTA!</span>"}));
-  var box=el("div",{style:"display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;margin-top:24px;"});
+  var agg=aggScores(currentSessionExercises());
+  var g=scoreLabel(agg.overall);
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;align-items:center;text-align:center;padding:38px 26px 40px;"});
+  wrap.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;"},"🎉"));
+  wrap.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#10B981;margin-bottom:16px;text-transform:uppercase;"},"Sesión completada"));
+
+  // tarjeta de calificación
+  var card=el("div",{class:"card",style:"width:100%;max-width:340px;background:#0D1525;border:1.5px solid "+g.color+"55;border-radius:22px;padding:22px 20px;margin-bottom:18px;"});
+  card.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:#64748B;text-transform:uppercase;margin-bottom:4px;text-align:center;"},"Calificación de la sesión"));
+  card.appendChild(el("div",{style:"font-size:66px;font-weight:900;line-height:1;letter-spacing:-2px;color:"+g.color+";text-align:center;"}, agg.overall!=null?String(agg.overall):"—"));
+  card.appendChild(el("div",{style:"font-size:16px;font-weight:800;color:"+g.color+";margin-top:2px;margin-bottom:18px;text-align:center;"}, g.txt));
+  card.appendChild(scoreDimRow("Intensidad", agg.intensidad));
+  card.appendChild(scoreDimRow("Tono", agg.tono));
+  card.appendChild(scoreDimRow("Esfuerzo", agg.esfuerzo));
+  wrap.appendChild(card);
+
+  wrap.appendChild(el("div",{style:"font-size:13px;color:#64748B;line-height:1.9;margin-bottom:18px;",html:"<span style='color:#3B82F6;font-weight:700;'>✓ Guardado en tu historial</span><br><span style='color:#10B981;font-weight:800;'>¡PIENSA SIEMPRE EN VOZ ALTA!</span>"}));
+
+  var box=el("div",{style:"display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;"});
   box.appendChild(btn("📊 Ver mi historial", BIG_BTN+"background:#0D1525;border:1.5px solid rgba(59,130,246,0.4);font-size:16px;padding:16px;", function(){go("history");}));
   box.appendChild(btn("Nueva sesión", BIG_BTN+"background:#10B981;font-size:16px;padding:16px;", newSession));
   wrap.appendChild(box);
@@ -896,15 +977,24 @@ function HistoryScreen(){
     if(exs[0]){ var p="AHHH "+exs[0].avg+"s"; if(exs[0].avgDb) p+=" · "+exs[0].avgDb+" dB"; if(exs[0].pctDb!=null) p+=" · "+exs[0].pctDb+"% rango"; parts.push(p); }
     if(exs[1]&&exs[1].pitch) parts.push("↑ "+exs[1].pitch.note);
     if(exs[2]&&exs[2].pitch) parts.push("↓ "+exs[2].pitch.note);
-    var dots=el("div",{style:"display:flex;gap:3px;"});
+    var agg=aggScores(exs);
+    var gl=scoreLabel(agg.overall);
+    var dots=el("div",{style:"display:flex;gap:3px;margin-top:6px;"});
     EXERCISES.forEach(function(e){ dots.appendChild(el("div",{style:"width:7px;height:7px;border-radius:50%;background:"+(exs[e.id]?e.color:"rgba(255,255,255,0.08)")+";"})); });
+    var gradeBadge = agg.overall!=null
+      ? el("div",{style:"flex-shrink:0;text-align:center;width:46px;"},[
+          el("div",{style:"font-size:23px;font-weight:900;line-height:1;color:"+gl.color+";"},String(agg.overall)),
+          el("div",{style:"font-size:8px;color:#64748B;letter-spacing:0.5px;margin-top:1px;text-transform:uppercase;"},gl.txt)
+        ])
+      : null;
     list.appendChild(el("div",{style:"background:#0D1525;border-radius:14px;padding:13px 15px;border:1px solid "+(complete?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.05)")+";display:flex;align-items:center;gap:12px;"},[
       el("div",{style:"width:40px;height:40px;border-radius:11px;flex-shrink:0;background:"+(complete?"rgba(16,185,129,0.12)":"rgba(255,255,255,0.03)")+";display:flex;align-items:center;justify-content:center;font-size:18px;"},complete?"🏆":"📝"),
       el("div",{style:"flex:1;min-width:0;"},[
         el("div",{style:"font-size:14px;font-weight:800;color:#F1F5F9;text-transform:capitalize;"},fdate+" · "+fhour),
-        el("div",{style:"font-size:11.5px;color:#475569;margin-top:2px;line-height:1.5;"},count+"/"+EXERCISES.length+" ejercicios"+(parts.length?"  ·  "+parts.join("  ·  "):""))
+        el("div",{style:"font-size:11.5px;color:#475569;margin-top:2px;line-height:1.5;"},count+"/"+EXERCISES.length+" ejercicios"+(parts.length?"  ·  "+parts.join("  ·  "):"")),
+        dots
       ]),
-      dots
+      gradeBadge
     ]));
   });
   wrap.appendChild(list);
