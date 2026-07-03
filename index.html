@@ -148,8 +148,17 @@ var state = {
   // audio
   micOn:false, micError:null, reading:null,
   audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
+  noteBuf:[], voidFrames:0,
   history:[], repSamples:{db:[],hz:[],zin:0,ztot:0}
 };
+
+// Nota más frecuente de las últimas lecturas (estabiliza la identificación del tono).
+function modeMidi(arr){
+  if(!arr.length) return null;
+  var count={}, best=arr[arr.length-1], bestN=0;
+  for(var i=0;i<arr.length;i++){ var v=arr[i]; count[v]=(count[v]||0)+1; if(count[v]>bestN){ bestN=count[v]; best=v; } }
+  return best;
+}
 
 var app = document.getElementById("app");
 
@@ -208,18 +217,22 @@ function startMic(cb){
     state.micError="No se pudo iniciar el audio en este navegador. Prueba abrir la app en Safari."; render(); if(cb)cb(false); return;
   }
 
+  // Desactivar el procesamiento del micrófono: en iOS el control automático de ganancia,
+  // la cancelación de eco y la supresión de ruido alteran el tono y el volumen medidos.
+  var micConstraints={audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}};
+
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     // Fallback a la API antigua (algunos WebViews)
     var legacy=navigator.getUserMedia||navigator.webkitGetUserMedia||navigator.mozGetUserMedia;
     if(legacy){
-      legacy.call(navigator,{audio:true}, function(st){ onStream(st); }, function(err){ onError(err); });
+      legacy.call(navigator,micConstraints, function(st){ onStream(st); }, function(err){ onError(err); });
       return;
     }
     state.micError="Este navegador no expone el micrófono (mediaDevices no existe). Abre el archivo en Safari, no dentro de otra app.";
     render(); if(cb)cb(false); return;
   }
 
-  navigator.mediaDevices.getUserMedia({audio:true})
+  navigator.mediaDevices.getUserMedia(micConstraints)
     .then(onStream).catch(onError);
 
   function onStream(stream){
@@ -246,9 +259,27 @@ function startMic(cb){
         var db=Math.round(state.smoothDb);
         var midi=null, mf=null, cents=0, f=0;
         if(res.freq>0){
-          state.smoothF = state.smoothF>0 ? state.smoothF*0.65+res.freq*0.35 : res.freq;
-          f=state.smoothF; mf=freqToMidi(f); midi=Math.round(mf); cents=Math.round((mf-midi)*100);
-        } else { state.smoothF=0; }
+          var fr=res.freq;
+          // Corrección de octava: si la detección saltó a ~2× o ~½ del tono actual, ajústala
+          // (evita que un armónico envenene el suavizado y la nota).
+          if(state.smoothF>0){
+            if(Math.abs(fr-2*state.smoothF) < 0.15*state.smoothF) fr=fr/2;
+            else if(Math.abs(fr-0.5*state.smoothF) < 0.15*state.smoothF) fr=fr*2;
+          }
+          state.smoothF = state.smoothF>0 ? state.smoothF*0.6+fr*0.4 : fr;
+          f=state.smoothF; mf=freqToMidi(f);
+          var rawMidi=Math.round(freqToMidi(fr));    // nota de esta trama, desde la freq cruda corregida
+          state.noteBuf.push(rawMidi); if(state.noteBuf.length>6) state.noteBuf.shift();
+          midi=modeMidi(state.noteBuf);              // nota estable = la más frecuente reciente
+          cents=Math.round((mf-midi)*100);
+          state.voidFrames=0;
+        } else {
+          // Tolera microcortes: conserva la nota unas cuantas tramas antes de soltarla (evita parpadeo).
+          state.voidFrames++;
+          if(state.voidFrames<4 && state.smoothF>0){
+            f=state.smoothF; mf=freqToMidi(f); midi=modeMidi(state.noteBuf);
+          } else { state.smoothF=0; state.noteBuf.length=0; }
+        }
         var s={db:db, freq:f?Math.round(f):0, midi:midi, mf:mf, cents:cents, voiced:res.freq>0};
         state.reading=s;
         state.history.push({db:db, mf:mf});
@@ -290,6 +321,7 @@ function stopMic(){
   if(state.raf) cancelAnimationFrame(state.raf);
   if(state.stream){ state.stream.getTracks().forEach(function(t){ t.stop(); }); state.stream=null; }
   state.smoothF=0; state.smoothDb=0; state.micOn=false; state.reading=null;
+  state.noteBuf.length=0; state.voidFrames=0;
   render();
 }
 
@@ -584,19 +616,19 @@ function HomeScreen(){
 
   var head=el("div",{style:"padding:calc(env(safe-area-inset-top) + 28px) 24px 8px;text-align:center;"});
   head.appendChild(el("div",{style:"font-size:33px;font-weight:900;letter-spacing:-2px;color:#0a0a0a;line-height:1;"},"LSVT LOUD"));
-  head.appendChild(el("div",{style:"margin-top:6px;font-size:15px;color:#0d47a1;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
-  head.appendChild(el("div",{style:"margin-top:3px;font-size:9px;color:#93a0c8;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
+  head.appendChild(el("div",{style:"margin-top:5px;font-size:15px;color:#0d47a1;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
+  head.appendChild(el("div",{style:"margin-top:2px;font-size:9px;color:#93a0c8;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
   if(streak>0){
     head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:rgba(230,81,0,0.1);border:1px solid rgba(230,81,0,0.35);border-radius:99px;padding:5px 15px;font-size:13px;font-weight:800;color:#e65100;"},"🔥 "+streak+(streak===1?" día":" días")+" seguidos"));
   }
-  var barBg=el("div",{style:"margin-top:11px;background:#dde3f3;border-radius:99px;height:5px;overflow:hidden;"});
+  var barBg=el("div",{style:"margin-top:9px;background:#dde3f3;border-radius:99px;height:5px;overflow:hidden;"});
   barBg.appendChild(el("div",{style:"height:100%;width:"+(doneCount/EXERCISES.length*100)+"%;background:linear-gradient(90deg,#0d47a1,#6a1b9a,#2e7d32);border-radius:99px;transition:width 0.6s ease;"}));
   head.appendChild(barBg);
-  head.appendChild(el("div",{style:"margin-top:5px;font-size:12px;color:#5a6899;"},doneCount+" / "+EXERCISES.length+" ejercicios completados hoy"));
+  head.appendChild(el("div",{style:"margin-top:4px;font-size:12px;color:#5a6899;"},doneCount+" / "+EXERCISES.length+" ejercicios completados hoy"));
   wrap.appendChild(head);
 
-  var nav=el("div",{style:"display:flex;gap:10px;padding:0 16px 8px;"});
-  var navCard="flex:1;background:#ffffff;border-radius:16px;padding:10px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;";
+  var nav=el("div",{style:"display:flex;gap:10px;padding:0 16px 7px;"});
+  var navCard="flex:1;background:#ffffff;border-radius:16px;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;";
   var b1=btn([el("div",{style:"font-size:26px;"},"🎹"),el("div",{style:"font-size:14px;font-weight:800;color:#0a0a0a;"},"Medidor"),el("div",{style:"font-size:10.5px;color:#5a6899;"},"dB + tono + piano")], navCard+"border:1.5px solid rgba(106,27,154,0.35);", function(){go("tuner");});
   var b2=btn([el("div",{style:"font-size:26px;"},"📊"),el("div",{style:"font-size:14px;font-weight:800;color:#0a0a0a;"},"Historial"),el("div",{style:"font-size:10.5px;color:#5a6899;"},state.log.length+(state.log.length===1?" sesión":" sesiones"))], navCard+"border:1.5px solid rgba(13,71,161,0.35);", function(){go("history");});
   nav.appendChild(b1); nav.appendChild(b2);
@@ -605,11 +637,11 @@ function HomeScreen(){
   // Tarea de transferencia del día (carryover): usar la voz fuerte fuera de los ejercicios.
   var todayKey=localDay(new Date().toISOString());
   var carryDone=state.settings.carryDone===todayKey;
-  var carryWrap=el("div",{style:"padding:0 16px 8px;"});
+  var carryWrap=el("div",{style:"padding:0 16px 7px;"});
   carryWrap.appendChild(btn([
     el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(carryDone?"#2e7d32":"#e65100")+";text-transform:uppercase;font-weight:800;margin-bottom:4px;text-align:left;"},(carryDone?"✓ HECHA · ":"🎯 ")+"TAREA DE HOY · VOZ FUERTE EN LA VIDA REAL"),
     el("div",{style:"font-size:14px;color:"+(carryDone?"#5a6899":"#0a0a0a")+";line-height:1.4;text-align:left;font-weight:600;"+(carryDone?"text-decoration:line-through;":"")},todayCarryover())
-  ],"width:100%;background:"+(carryDone?"rgba(46,125,50,0.06)":"rgba(230,81,0,0.07)")+";border:1.5px solid "+(carryDone?"rgba(46,125,50,0.3)":"rgba(230,81,0,0.35)")+";border-radius:16px;padding:10px 14px;color:#0a0a0a;", function(){
+  ],"width:100%;background:"+(carryDone?"rgba(46,125,50,0.06)":"rgba(230,81,0,0.07)")+";border:1.5px solid "+(carryDone?"rgba(46,125,50,0.3)":"rgba(230,81,0,0.35)")+";border-radius:16px;padding:8px 14px;color:#0a0a0a;", function(){
     state.settings.carryDone = carryDone ? "" : todayKey;
     saveSettings(state.settings); render();
   }));
@@ -640,8 +672,8 @@ function HomeScreen(){
   });
   wrap.appendChild(list);
 
-  var foot=el("div",{style:"text-align:center;padding:8px 24px calc(env(safe-area-inset-bottom) + 12px);"});
-  foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(26,35,126,0.11);border-radius:10px;padding:9px 22px;color:#5a6899;font-size:13px;", newSession));
+  var foot=el("div",{style:"text-align:center;padding:6px 24px calc(env(safe-area-inset-bottom) + 10px);"});
+  foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(26,35,126,0.11);border-radius:10px;padding:8px 22px;color:#5a6899;font-size:13px;", newSession));
   wrap.appendChild(foot);
   return wrap;
 }
