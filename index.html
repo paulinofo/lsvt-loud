@@ -35,12 +35,12 @@ var EXERCISES = [
     instruction:"Inhala profundo · Vocaliza AHHH en tono normal · Lo MÁS FUERTE posible · Mantén tanto como puedas",
     reps:15, target:8, type:"sustain", color:"#3B82F6", emoji:"🔊", pitchRole:"avg",
     zone:{min:45,max:52,mode:"in",label:"rango normal (LA2–MI3)"} },
-  { id:1, name:"TONO ALTO", label:"Ejercicio 2 · Voz aguda", vowel:"EHHH",
-    instruction:"Inhala profundo · Vocaliza EHHH en tu tono MÁS ALTO · Lo MÁS FUERTE posible",
+  { id:1, name:"TONO ALTO", label:"Ejercicio 2 · Voz aguda", vowel:"AHHH",
+    instruction:"Inhala profundo · Empieza AHHH en tu tono normal y SUBE deslizando · Sostén tu tono MÁS ALTO · Lo MÁS FUERTE posible",
     reps:15, target:5, type:"sustain", color:"#A855F7", emoji:"📢", pitchRole:"max",
     zone:{min:55,max:77,mode:"above",label:"zona aguda (SOL3+)"} },
-  { id:2, name:"TONO GRAVE", label:"Ejercicio 3 · Voz grave", vowel:"OHHH",
-    instruction:"Inhala profundo · Vocaliza OHHH en tu tono MÁS GRAVE · Lo MÁS FUERTE posible",
+  { id:2, name:"TONO GRAVE", label:"Ejercicio 3 · Voz grave", vowel:"AHHH",
+    instruction:"Inhala profundo · Empieza AHHH en tu tono normal y BAJA deslizando · Sostén tu tono MÁS GRAVE · Lo MÁS FUERTE posible",
     reps:15, target:5, type:"sustain", color:"#10B981", emoji:"🔉", pitchRole:"min",
     zone:{min:34,max:43,mode:"below",label:"zona grave (SOL2−)"} },
   { id:3, name:"FRASES", label:"Ejercicio 4 · Voz funcional",
@@ -65,6 +65,25 @@ var READINGS=[
   {titulo:"La actitud lo cambia todo", texto:"La actitud con la que enfrentamos la vida transforma por completo lo que vivimos. No podemos elegir todas las circunstancias, pero siempre podemos elegir cómo responder a ellas. Una sonrisa, una palabra amable o un pensamiento esperanzador tienen el poder de cambiar un día entero. El optimismo no ignora las dificultades: las mira de frente y decide buscar una salida. Cada mañana es una página en blanco esperando ser escrita con valentía y entusiasmo. Cuida tus pensamientos, alimenta tu esperanza y habla con fuerza y claridad, porque quien cree en sí mismo ya ha dado el primer paso hacia el éxito."}
 ];
 
+/* ─────────── Transferencia diaria (carryover LSVT: voz fuerte en la vida real) ─────────── */
+var CARRYOVER=[
+  "Saluda hoy a alguien con tu VOZ FUERTE: «¡Buenos días! ¿Cómo estás?»",
+  "Haz una llamada telefónica y usa tu voz fuerte durante toda la llamada",
+  "Pide algo en una tienda o restaurante con voz fuerte y clara",
+  "Cuéntale a alguien cómo estuvo tu día, con voz fuerte y sin que te pida repetir",
+  "Lee en voz alta una noticia a alguien que esté a 3 metros de ti",
+  "Llama a un familiar solo para saludarlo, con tu voz más fuerte y clara",
+  "Da las gracias tres veces hoy con voz fuerte: «¡MUCHAS GRACIAS!»",
+  "Comparte una opinión en la comida con voz fuerte y sin prisa",
+  "Canta un verso de tu canción favorita con voz fuerte",
+  "Hazle una pregunta a un vecino o conocido proyectando la voz"
+];
+function todayCarryover(){
+  var d=new Date();
+  var doy=Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);
+  return CARRYOVER[doy%CARRYOVER.length];
+}
+
 /* ─────────── Utilidades ─────────── */
 function pad(n){ return (n<10?"0":"")+n; }
 function fmtTime(s){ return pad(Math.floor(s/60))+":"+pad(s%60); }
@@ -79,15 +98,17 @@ function localDay(iso){ var d=new Date(iso); return d.getFullYear()+"-"+pad(d.ge
 var LS_LOG="lsvt-log", LS_SET="lsvt-settings";
 function loadLog(){ try{ return JSON.parse(localStorage.getItem(LS_LOG)||"[]"); }catch(e){ return []; } }
 function saveLog(l){ try{ localStorage.setItem(LS_LOG, JSON.stringify(l)); }catch(e){} }
-function loadSettings(){ try{ var s=JSON.parse(localStorage.getItem(LS_SET)||"{}"); return {calib:s.calib!=null?s.calib:94, targetDb:s.targetDb!=null?s.targetDb:80, reps:s.reps||{}, resetAt:s.resetAt||0}; }catch(e){ return {calib:94,targetDb:80,reps:{},resetAt:0}; } }
+function loadSettings(){ try{ var s=JSON.parse(localStorage.getItem(LS_SET)||"{}"); return {calib:s.calib!=null?s.calib:94, targetDb:s.targetDb!=null?s.targetDb:80, reps:s.reps||{}, resetAt:s.resetAt||0, phrases:(Array.isArray(s.phrases)&&s.phrases.length)?s.phrases:null, carryDone:s.carryDone||""}; }catch(e){ return {calib:94,targetDb:80,reps:{},resetAt:0,phrases:null,carryDone:""}; } }
 function saveSettings(s){ try{ localStorage.setItem(LS_SET, JSON.stringify(s)); }catch(e){} }
 
 // Repeticiones efectivas (con override guardado por el usuario)
 function exReps(ex){ var r=state.settings.reps[ex.id]; return (r!=null)?r:ex.reps; }
+// Frases efectivas: las personalizadas por el paciente (protocolo LSVT: frases propias) o las de ejemplo.
+function exPhrases(ex){ return (state.settings.phrases&&state.settings.phrases.length)?state.settings.phrases:ex.phrases; }
 // Total de repeticiones a realizar. Para frases: ciclos × nº de frases (10).
-function exTotal(ex){ return (ex.type==="phrases")?(exReps(ex)*ex.phrases.length):exReps(ex); }
+function exTotal(ex){ return (ex.type==="phrases")?(exReps(ex)*exPhrases(ex).length):exReps(ex); }
 function setReps(ex, val){
-  var min=1, max=(ex.type==="phrases")?ex.phrases.length:30;
+  var min=1, max=(ex.type==="phrases")?exPhrases(ex).length:30;
   state.settings.reps[ex.id]=clamp(val, min, max);
   saveSettings(state.settings); render();
 }
@@ -122,7 +143,7 @@ var state = {
   paused:false, restSec:0, restTimer:null, restT0:0,
   gap:0, gapTimer:null, gapEndAt:0, waterAuto:false,
   readSec:300, readTimer:null, readEndAt:0, readRunning:false, readText:null,
-  timerT0:0, wakeLock:null,
+  timerT0:0, wakeLock:null, editPhrases:false,
   recorder:null, recChunks:[], recBlob:null, recURL:null, recMime:"", recording:false, recStarted:false, recUnsupported:false,
   // audio
   micOn:false, micError:null, reading:null,
@@ -390,7 +411,7 @@ var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#475569;text-transform:
 
 /* ─────────── Navegación ─────────── */
 function go(screen){ if(screen==="home"||screen==="history"){ if(state.micOn) stopMic(); } state.screen=screen; render(); }
-function openEx(i){ clearPause(); clearRead(); state.readSec=300; if(EXERCISES[i].type==="reading") state.readText=nextReading(); state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
+function openEx(i){ clearPause(); clearRead(); state.readSec=300; if(EXERCISES[i].type==="reading") state.readText=nextReading(); state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.editPhrases=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
 function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} clearPause(); clearRead(); state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
 function newSession(){ if(state.micOn) stopMic(); clearRead(); state.done={}; state.sessionId=null; state.settings.resetAt=Date.now(); saveSettings(state.settings); state.screen="home"; render(); }
 
@@ -530,7 +551,7 @@ function repDone(){
     finishEx(ex.id);
   } else if(ex.type==="phrases"){
     // Frases: al terminar cada frase, ¿toca pausa de agua (tras ciclo 2) o pausa de 3s + auto-avance?
-    var perCycle=ex.phrases.length;               // 10
+    var perCycle=exPhrases(ex).length;            // 10
     if(state.rep+1 === 2*perCycle){ startWaterBreak(); }   // acaba de completar el 2º ciclo (frase 20)
     else { startPhraseGap(); }                             // 3s y avanza sola
   } else {
@@ -564,7 +585,7 @@ function HomeScreen(){
   var head=el("div",{style:"padding:48px 24px 16px;text-align:center;"});
   head.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#475569;text-transform:uppercase;margin-bottom:8px;"},"Terapia de Voz"));
   head.appendChild(el("div",{style:"font-size:42px;font-weight:900;letter-spacing:-2px;color:#F8FAFC;line-height:1;"},"LSVT LOUD"));
-  head.appendChild(el("div",{style:"margin-top:10px;font-size:15px;color:#3B82F6;font-weight:700;letter-spacing:1px;"},"💬 PIENSA EN VOZ ALTA"));
+  head.appendChild(el("div",{style:"margin-top:10px;font-size:15px;color:#3B82F6;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
   head.appendChild(el("div",{style:"margin-top:5px;font-size:9px;color:#334155;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
   if(streak>0){
     head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:99px;padding:6px 16px;font-size:13px;font-weight:800;color:#F59E0B;"},"🔥 "+streak+(streak===1?" día":" días")+" seguidos"));
@@ -581,6 +602,20 @@ function HomeScreen(){
   var b2=btn([el("div",{style:"font-size:26px;"},"📊"),el("div",{style:"font-size:14px;font-weight:800;color:#F1F5F9;"},"Historial"),el("div",{style:"font-size:10.5px;color:#64748B;"},state.log.length+(state.log.length===1?" sesión":" sesiones"))], navCard+"border:1.5px solid rgba(59,130,246,0.35);", function(){go("history");});
   nav.appendChild(b1); nav.appendChild(b2);
   wrap.appendChild(nav);
+
+  // Tarea de transferencia del día (carryover): usar la voz fuerte fuera de los ejercicios.
+  var todayKey=localDay(new Date().toISOString());
+  var carryDone=state.settings.carryDone===todayKey;
+  var carryWrap=el("div",{style:"padding:0 16px 12px;"});
+  carryWrap.appendChild(btn([
+    el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(carryDone?"#10B981":"#F59E0B")+";text-transform:uppercase;font-weight:800;margin-bottom:5px;text-align:left;"},(carryDone?"✓ HECHA · ":"🎯 ")+"TAREA DE HOY · VOZ FUERTE EN LA VIDA REAL"),
+    el("div",{style:"font-size:14px;color:"+(carryDone?"#475569":"#E2E8F0")+";line-height:1.55;text-align:left;font-weight:600;"+(carryDone?"text-decoration:line-through;":"")},todayCarryover()),
+    el("div",{style:"font-size:10.5px;color:#475569;margin-top:6px;text-align:left;"},carryDone?"¡Muy bien! Mañana habrá una nueva.":"Tócala cuando la hayas hecho")
+  ],"width:100%;background:"+(carryDone?"rgba(16,185,129,0.06)":"rgba(245,158,11,0.07)")+";border:1.5px solid "+(carryDone?"rgba(16,185,129,0.3)":"rgba(245,158,11,0.35)")+";border-radius:16px;padding:13px 16px;color:#F1F5F9;", function(){
+    state.settings.carryDone = carryDone ? "" : todayKey;
+    saveSettings(state.settings); render();
+  }));
+  wrap.appendChild(carryWrap);
 
   var list=el("div",{style:"padding:0 16px;display:flex;flex-direction:column;gap:10px;"});
   var sess=currentSessionExercises();
@@ -866,7 +901,8 @@ function updateTimer(){ if(_liveNodes.timerEl){ var ex=EXERCISES[state.exIdx]; v
 /* ─────────── Frases ─────────── */
 function PhraseScreen(){
   var ex=EXERCISES[state.exIdx];
-  var perCycle=ex.phrases.length;                 // 10 frases por ciclo
+  if(state.editPhrases) return PhraseEditScreen(ex);
+  var perCycle=exPhrases(ex).length;              // 10 frases por ciclo
   var cycles=exReps(ex);                           // nº de ciclos (editable, default 5)
   var cycleNum=Math.floor(state.rep/perCycle)+1;
   var idxInCycle=state.rep % perCycle;
@@ -898,7 +934,12 @@ function PhraseScreen(){
   wrap.appendChild(dots);
 
   var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:10px 18px 0;"});
-  if(!state.running && state.rep===0 && state.sec===0) body.appendChild(repStepperRow(ex));
+  if(!state.running && state.rep===0 && state.sec===0){
+    body.appendChild(repStepperRow(ex));
+    body.appendChild(btn("✏️  Personalizar mis frases"+(state.settings.phrases?" ✓":""),
+      "width:100%;margin-bottom:8px;background:rgba(245,158,11,0.08);border:1.5px solid rgba(245,158,11,0.4);border-radius:14px;padding:11px;color:#F59E0B;font-size:13.5px;font-weight:800;",
+      function(){ state.editPhrases=true; render(); }));
+  }
 
   // termómetro + datos (volumen y tiempo)
   var rowTop=el("div",{style:"display:flex;gap:14px;align-items:stretch;"});
@@ -922,7 +963,7 @@ function PhraseScreen(){
 
   // frase a leer
   var carta=el("div",{class:"card",style:"margin-top:14px;background:#0D1525;border-radius:18px;border:1.5px solid "+ex.color+"40;padding:22px 20px;"});
-  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#F1F5F9;line-height:1.45;text-align:center;"},'"'+ex.phrases[idxInCycle]+'"'));
+  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#F1F5F9;line-height:1.45;text-align:center;"},'"'+exPhrases(ex)[idxInCycle]+'"'));
   body.appendChild(carta);
 
   if(!state.micOn && !state.micError){
@@ -959,6 +1000,44 @@ function PhraseScreen(){
   wrap.appendChild(foot);
   if(state.paused) wrap.appendChild(pauseOverlay());
   if(state.gap>0) wrap.appendChild(gapOverlay());
+  return wrap;
+}
+
+/* ─────────── Editor de frases personales (protocolo LSVT: frases propias del paciente) ─────────── */
+function PhraseEditScreen(ex){
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
+  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 10px;"});
+  header.appendChild(btn("‹",BACK_BTN,function(){ state.editPhrases=false; render(); }));
+  header.appendChild(el("div",{style:"flex:1;"},[
+    el("div",{style:"font-size:10px;letter-spacing:3px;color:#F59E0B;text-transform:uppercase;margin-bottom:2px;"},"MIS FRASES"),
+    el("div",{style:"font-size:20px;font-weight:900;color:#F8FAFC;"},"Personalizar frases")
+  ]));
+  wrap.appendChild(header);
+  wrap.appendChild(el("div",{style:"padding:0 20px 14px;font-size:13px;color:#64748B;line-height:1.7;"},
+    "El protocolo LSVT LOUD usa 10 frases que TÚ dices todos los días: saludos, peticiones, nombres de tu familia. Escríbelas con tus palabras — practicar con frases propias transfiere la voz fuerte a tu vida diaria."));
+  var list=el("div",{style:"flex:1;padding:0 16px;display:flex;flex-direction:column;gap:8px;"});
+  var cur=exPhrases(ex), inputs=[];
+  for(var i=0;i<ex.phrases.length;i++){
+    var inp=el("input",{type:"text",maxlength:"90",style:"flex:1;min-width:0;background:#0D1525;border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px;color:#F1F5F9;font-size:16px;font-family:inherit;"});
+    inp.value=cur[i]||ex.phrases[i];
+    inputs.push(inp);
+    list.appendChild(el("div",{style:"display:flex;align-items:center;gap:8px;"},[
+      el("div",{style:"width:18px;text-align:right;font-size:12px;color:#475569;font-weight:800;flex-shrink:0;"},String(i+1)),
+      inp
+    ]));
+  }
+  wrap.appendChild(list);
+  var foot=el("div",{style:"display:flex;flex-direction:column;gap:10px;padding:16px 20px 44px;"});
+  foot.appendChild(btn("✓  GUARDAR MIS FRASES", BIG_BTN+"background:#F59E0B;color:#3b2503;font-size:17px;", function(){
+    state.settings.phrases=inputs.map(function(inp,j){ var v=inp.value.trim(); return v||ex.phrases[j]; });
+    saveSettings(state.settings); state.editPhrases=false; render();
+  }));
+  if(state.settings.phrases){
+    foot.appendChild(btn("↺ Volver a las frases de ejemplo","width:100%;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:11px;color:#64748B;font-size:13px;font-weight:700;", function(){
+      state.settings.phrases=null; saveSettings(state.settings); state.editPhrases=false; render();
+    }));
+  }
+  wrap.appendChild(foot);
   return wrap;
 }
 
@@ -1112,7 +1191,7 @@ function DoneScreen(){
   card.appendChild(scoreDimRow("Esfuerzo", agg.esfuerzo));
   wrap.appendChild(card);
 
-  wrap.appendChild(el("div",{style:"font-size:13px;color:#64748B;line-height:1.9;margin-bottom:18px;",html:"<span style='color:#3B82F6;font-weight:700;'>✓ Guardado en tu historial</span><br><span style='color:#10B981;font-weight:800;'>¡PIENSA SIEMPRE EN VOZ ALTA!</span>"}));
+  wrap.appendChild(el("div",{style:"font-size:13px;color:#64748B;line-height:1.9;margin-bottom:18px;",html:"<span style='color:#3B82F6;font-weight:700;'>✓ Guardado en tu historial</span><br><span style='color:#10B981;font-weight:800;'>¡PIENSA SIEMPRE FUERTE!</span>"}));
 
   var box=el("div",{style:"display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;"});
   box.appendChild(btn("📊 Ver mi historial", BIG_BTN+"background:#0D1525;border:1.5px solid rgba(59,130,246,0.4);font-size:16px;padding:16px;", function(){go("history");}));
