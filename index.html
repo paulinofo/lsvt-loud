@@ -625,16 +625,16 @@ function SustainScreen(){
     gWrap.appendChild(el("div",{style:"font-size:10.5px;color:#334155;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
     body.appendChild(gWrap);
     _liveNodes.graph=gWrap;
-
-    // piano en vivo (nota actual resaltada)
-    var am=(state.reading&&state.reading.midi!=null)?state.reading.midi:null;
-    var pWrap=el("div",{style:"margin-top:12px;"});
-    pWrap.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#475569;font-weight:700;padding:0 2px 2px;"},[el("span",null,"🎹 TU TONO EN EL PIANO"),el("span",{style:"color:#A855F7;"},"toca una tecla")]));
-    var pno=buildPiano(am, 104);
-    pWrap.appendChild(pno.node);
-    body.appendChild(pWrap);
-    _liveNodes.pianoKeys=pno.keys; _liveNodes.pianoActive=am;
   }
+
+  // piano SIEMPRE visible; resalta tu nota cuando el micrófono está activo
+  var am=(state.reading&&state.reading.midi!=null)?state.reading.midi:null;
+  var pWrap=el("div",{style:"margin-top:12px;"});
+  pWrap.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#475569;font-weight:700;padding:0 2px 2px;"},[el("span",null,"🎹 TU TONO EN EL PIANO"),el("span",{style:"color:#A855F7;"},state.micOn?"tu nota se resalta":"toca para escuchar")]));
+  var pno=buildPiano(am, 104);
+  pWrap.appendChild(pno.node);
+  body.appendChild(pWrap);
+  _liveNodes.pianoKeys=pno.keys; _liveNodes.pianoActive=am;
 
   // stats
   var dbSoFar=state.dbLog.filter(Boolean);
