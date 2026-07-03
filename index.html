@@ -1079,8 +1079,10 @@ if(!state.secureOk){
 }
 render();
 
-// Service Worker: guarda la app para uso offline
-if("serviceWorker" in navigator){
+// Service Worker: guarda la app para uso offline.
+// En desarrollo (localhost) NO se registra, para ver siempre la última versión.
+var _isDev = (location.hostname==="localhost" || location.hostname==="127.0.0.1");
+if("serviceWorker" in navigator && !_isDev){
   window.addEventListener("load", function(){
     navigator.serviceWorker.register("sw.js").catch(function(){});
   });
