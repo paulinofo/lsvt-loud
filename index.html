@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#060B18" />
@@ -79,7 +79,7 @@ function localDay(iso){ var d=new Date(iso); return d.getFullYear()+"-"+pad(d.ge
 var LS_LOG="lsvt-log", LS_SET="lsvt-settings";
 function loadLog(){ try{ return JSON.parse(localStorage.getItem(LS_LOG)||"[]"); }catch(e){ return []; } }
 function saveLog(l){ try{ localStorage.setItem(LS_LOG, JSON.stringify(l)); }catch(e){} }
-function loadSettings(){ try{ var s=JSON.parse(localStorage.getItem(LS_SET)||"{}"); return {calib:s.calib!=null?s.calib:94, targetDb:s.targetDb!=null?s.targetDb:80, reps:s.reps||{}}; }catch(e){ return {calib:94,targetDb:80,reps:{}}; } }
+function loadSettings(){ try{ var s=JSON.parse(localStorage.getItem(LS_SET)||"{}"); return {calib:s.calib!=null?s.calib:94, targetDb:s.targetDb!=null?s.targetDb:80, reps:s.reps||{}, resetAt:s.resetAt||0}; }catch(e){ return {calib:94,targetDb:80,reps:{},resetAt:0}; } }
 function saveSettings(s){ try{ localStorage.setItem(LS_SET, JSON.stringify(s)); }catch(e){} }
 
 // Repeticiones efectivas (con override guardado por el usuario)
@@ -119,9 +119,10 @@ var state = {
   repLog:[], dbLog:[], done:{}, log:loadLog(), settings:loadSettings(),
   sessionId:null,
   timer:null,
-  paused:false, restSec:0, restTimer:null,
-  gap:0, gapTimer:null, waterAuto:false,
-  readSec:300, readTimer:null, readRunning:false, readText:null,
+  paused:false, restSec:0, restTimer:null, restT0:0,
+  gap:0, gapTimer:null, gapEndAt:0, waterAuto:false,
+  readSec:300, readTimer:null, readEndAt:0, readRunning:false, readText:null,
+  timerT0:0, wakeLock:null,
   recorder:null, recChunks:[], recBlob:null, recURL:null, recMime:"", recording:false, recStarted:false, recUnsupported:false,
   // audio
   micOn:false, micError:null, reading:null,
@@ -271,6 +272,28 @@ function stopMic(){
   render();
 }
 
+/* ─────────── Wake Lock: pantalla encendida durante los ejercicios ─────────── */
+var _wlPending=false;
+function syncWakeLock(){
+  var want = state.screen==="ex" || (state.screen==="tuner" && state.micOn);
+  if(want && !state.wakeLock && !_wlPending && "wakeLock" in navigator){
+    _wlPending=true;
+    navigator.wakeLock.request("screen").then(function(wl){
+      _wlPending=false;
+      if(!(state.screen==="ex" || (state.screen==="tuner" && state.micOn))){ try{ wl.release(); }catch(e){} return; }
+      state.wakeLock=wl;
+      wl.addEventListener("release", function(){ if(state.wakeLock===wl) state.wakeLock=null; });
+    }).catch(function(){ _wlPending=false; });
+  } else if(!want && state.wakeLock){
+    try{ state.wakeLock.release(); }catch(e){}
+    state.wakeLock=null;
+  }
+}
+// iOS libera el wake lock al bloquear o cambiar de app; se vuelve a pedir al regresar.
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState==="visible") syncWakeLock();
+});
+
 /* ─────────── Zonas ─────────── */
 function dbZone(db, targetDb){
   if(db==null || db<52) return {key:"silent",label:"· · · VOCALIZA",color:"#334155",msg:""};
@@ -369,7 +392,7 @@ var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#475569;text-transform:
 function go(screen){ if(screen==="home"||screen==="history"){ if(state.micOn) stopMic(); } state.screen=screen; render(); }
 function openEx(i){ clearPause(); clearRead(); state.readSec=300; if(EXERCISES[i].type==="reading") state.readText=nextReading(); state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
 function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} clearPause(); clearRead(); state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
-function newSession(){ if(state.micOn) stopMic(); clearRead(); state.done={}; state.sessionId=null; state.screen="home"; render(); }
+function newSession(){ if(state.micOn) stopMic(); clearRead(); state.done={}; state.sessionId=null; state.settings.resetAt=Date.now(); saveSettings(state.settings); state.screen="home"; render(); }
 
 function recordExercise(exId, stats){
   if(!state.sessionId){ state.sessionId=Date.now(); state.log.push({id:state.sessionId,date:new Date().toISOString(),exercises:{}}); }
@@ -391,9 +414,9 @@ function pauseSession(){
   if(state.paused) return;
   state.paused=true;
   if(state.timer){ clearInterval(state.timer); state.timer=null; }   // congela el cronómetro de la rep
-  state.restSec=0;
+  state.restSec=0; state.restT0=Date.now();
   if(state.restTimer) clearInterval(state.restTimer);
-  state.restTimer=setInterval(function(){ state.restSec++; if(_pauseNode) _pauseNode.textContent=fmtTime(state.restSec); }, 1000);
+  state.restTimer=setInterval(function(){ state.restSec=Math.floor((Date.now()-state.restT0)/1000); if(_pauseNode) _pauseNode.textContent=fmtTime(state.restSec); }, 500);
   render();
 }
 function resumeSession(){
@@ -402,8 +425,7 @@ function resumeSession(){
   if(state.restTimer){ clearInterval(state.restTimer); state.restTimer=null; }
   if(state.waterAuto){ state.waterAuto=false; phraseNext(); return; }  // pausa de agua de frases → continúa solo
   if(state.running){   // si estaba corriendo una rep, reanuda el cronómetro donde quedó
-    if(state.timer) clearInterval(state.timer);
-    state.timer=setInterval(function(){ state.sec++; updateTimer(); }, 1000);
+    startRepTimer();
   }
   render();
 }
@@ -418,13 +440,13 @@ var _gapNode=null;
 function phraseNext(){ state.rep++; state.sec=0; tickStart(); }   // siguiente frase y arranca medición sola
 function startWaterBreak(){ state.waterAuto=true; pauseSession(); } // pausa de agua; al reanudar continúa
 function startPhraseGap(){
-  state.gap=3;
+  state.gap=3; state.gapEndAt=Date.now()+3000;
   if(state.gapTimer) clearInterval(state.gapTimer);
   state.gapTimer=setInterval(function(){
-    state.gap--;
-    if(state.gap<=0){ clearInterval(state.gapTimer); state.gapTimer=null; state.gap=0; phraseNext(); }
-    else if(_gapNode){ _gapNode.textContent=String(state.gap); }
-  }, 1000);
+    var g=Math.ceil((state.gapEndAt-Date.now())/1000);
+    if(g<=0){ clearInterval(state.gapTimer); state.gapTimer=null; state.gap=0; phraseNext(); }
+    else if(g!==state.gap){ state.gap=g; if(_gapNode) _gapNode.textContent=String(g); }
+  }, 250);
   render();
 }
 function gapOverlay(){
@@ -455,9 +477,17 @@ function tickStart(){
   if(!state.micOn){ startMic(function(){}); }
   state.sec=0; state.running=true;
   state.repSamples={db:[],hz:[],zin:0,ztot:0}; state.history=[];
-  if(state.timer) clearInterval(state.timer);
-  state.timer=setInterval(function(){ state.sec++; updateTimer(); }, 1000);
+  startRepTimer();
   render();
+}
+// Cronómetro basado en la hora real: no deriva si iOS congela los intervalos en segundo plano.
+function startRepTimer(){
+  state.timerT0=Date.now()-state.sec*1000;
+  if(state.timer) clearInterval(state.timer);
+  state.timer=setInterval(function(){
+    var s=Math.floor((Date.now()-state.timerT0)/1000);
+    if(s!==state.sec){ state.sec=s; updateTimer(); }
+  }, 250);
 }
 function repDone(){
   state.running=false;
@@ -510,6 +540,7 @@ function repDone(){
 
 /* ─────────── Render principal ─────────── */
 function render(){
+  syncWakeLock();
   app.innerHTML="";
   var s=state.screen;
   if(s==="home") app.appendChild(HomeScreen());
@@ -944,12 +975,13 @@ function readStart(){
   releaseRec();
   function begin(){
     state.readRunning=true;
+    state.readEndAt=Date.now()+state.readSec*1000;
     if(state.readTimer) clearInterval(state.readTimer);
     state.readTimer=setInterval(function(){
-      state.readSec--;
-      if(state.readSec<=0){ state.readSec=0; stopReading(); return; }
-      if(_readNode) _readNode.textContent=fmtTime(state.readSec);
-    }, 1000);
+      var s=Math.max(0, Math.ceil((state.readEndAt-Date.now())/1000));
+      if(s!==state.readSec){ state.readSec=s; if(_readNode) _readNode.textContent=fmtTime(s); }
+      if(s<=0){ stopReading(); }
+    }, 250);
     render();
   }
   if(!state.micOn){ startMic(function(ok){ if(ok) startReadRecording(); begin(); }); }
@@ -1090,6 +1122,38 @@ function DoneScreen(){
 }
 
 /* ─────────── Historial ─────────── */
+// Resumen de progreso en texto (para enviarlo al médico por WhatsApp).
+function progressSummary(){
+  var streak=computeStreak(state.log);
+  var lines=["📈 Mi progreso LSVT LOUD",
+    "Sesiones: "+state.log.length+" · Racha: "+streak+(streak===1?" día":" días"),""];
+  state.log.slice().sort(function(a,b){return b.id-a.id;}).slice(0,20).forEach(function(s){
+    var d=new Date(s.date), exs=s.exercises||{}, agg=aggScores(exs);
+    var line="• "+d.toLocaleDateString("es-MX",{day:"numeric",month:"short"})+" "
+      +d.toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"})
+      +" — "+Object.keys(exs).length+"/"+EXERCISES.length+" ejercicios";
+    if(agg.overall!=null) line+=" — "+agg.overall+" pts ("+scoreLabel(agg.overall).txt+")";
+    if(exs[0]){ line+=" — AHHH "+exs[0].avg+"s"; if(exs[0].avgDb) line+=" · "+exs[0].avgDb+" dB"; }
+    lines.push(line);
+  });
+  if(state.log.length>20) lines.push("… y "+(state.log.length-20)+" sesiones más");
+  return lines.join("\n");
+}
+function shareProgress(){
+  if(navigator.share){ navigator.share({title:"Progreso LSVT LOUD", text:progressSummary()}).catch(function(){}); return; }
+  downloadBackup();
+}
+// Respaldo completo en JSON: protege el historial si el navegador borra localStorage.
+function downloadBackup(){
+  var d=new Date();
+  var data={app:"LSVT LOUD", exportedAt:d.toISOString(), settings:state.settings, log:state.log};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a"); a.href=url;
+  a.download="lsvt-historial-"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+".json";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
 function chartCard(title, note, data, mn, mx, goal, color){
   var box=el("div",{style:"margin:0 16px 14px;background:#0D1525;border-radius:16px;padding:16px 16px 12px;border:1px solid rgba(255,255,255,0.05);"});
   box.appendChild(el("div",{style:"font-size:10px;letter-spacing:2px;color:"+color+";text-transform:uppercase;margin-bottom:12px;"},title));
@@ -1163,7 +1227,9 @@ function HistoryScreen(){
   wrap.appendChild(list);
 
   if(state.log.length>0){
-    var foot=el("div",{style:"text-align:center;padding:18px 24px 44px;"});
+    var foot=el("div",{style:"display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 24px 44px;"});
+    foot.appendChild(btn("📤  Compartir mi progreso","width:100%;max-width:300px;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;color:#04310f;background:#25D366;", shareProgress));
+    foot.appendChild(btn("⬇ Respaldar datos (JSON)","width:100%;max-width:300px;background:#0D1525;border:1.5px solid rgba(255,255,255,0.12);border-radius:14px;padding:12px;color:#94A3B8;font-size:13px;font-weight:700;", downloadBackup));
     foot.appendChild(btn("Borrar historial","background:none;border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:10px 24px;color:#7F1D1D;font-size:13px;", function(){
       if(confirm("¿Borrar todo el historial? Esta acción no se puede deshacer.")){ state.log=[]; saveLog(state.log); state.sessionId=null; render(); }
     }));
@@ -1330,6 +1396,18 @@ state.secureOk = (typeof window.isSecureContext === "undefined") ? true : (windo
 if(!state.secureOk){
   state.micError="Esta página no está en un contexto seguro (https o archivo local). El micrófono estará bloqueado. Abre el archivo directamente en Safari (file://) o sírvelo por https.";
 }
+
+// Restaurar la sesión de hoy: si la app se recarga a mitad de sesión, los
+// ejercicios ya guardados vuelven a aparecer como completados en el inicio.
+(function(){
+  if(!state.log.length) return;
+  var s=state.log[state.log.length-1];
+  if(localDay(s.date)!==localDay(new Date().toISOString())) return;
+  if(s.id<=(state.settings.resetAt||0)) return;   // el usuario reinició la sesión de hoy
+  state.sessionId=s.id;
+  for(var k in (s.exercises||{})) state.done[k]=true;
+})();
+
 render();
 
 // Service Worker: guarda la app para uso offline.

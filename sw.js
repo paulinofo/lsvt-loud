@@ -1,5 +1,5 @@
 /* Service Worker LSVT LOUD — cachea la app para uso 100% offline */
-var CACHE = "lsvt-loud-v11";
+var CACHE = "lsvt-loud-v12";
 var ASSETS = [
   "./",
   "./index.html",
@@ -24,17 +24,40 @@ self.addEventListener("activate", function(e){
   );
 });
 
-// Cache-first: si está en caché lo sirve (offline); si no, red y guarda copia.
 self.addEventListener("fetch", function(e){
   if(e.request.method !== "GET") return;
+  var url = new URL(e.request.url);
+  var isPage = e.request.mode === "navigate" || url.pathname.endsWith("/index.html") || url.pathname.endsWith("/");
+
+  // Páginas: red primero (las actualizaciones llegan solas, sin subir la versión
+  // del caché); si no hay red, se sirve la copia guardada (offline).
+  if(isPage){
+    e.respondWith(
+      fetch(e.request).then(function(res){
+        if(res && res.ok){
+          var copy = res.clone();
+          caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
+        }
+        return res;
+      }).catch(function(){
+        return caches.match(e.request).then(function(hit){
+          return hit || caches.match("./index.html");
+        });
+      })
+    );
+    return;
+  }
+
+  // Resto de assets: caché primero; si no está, red y guarda copia (solo respuestas OK).
   e.respondWith(
     caches.match(e.request).then(function(hit){
       if(hit) return hit;
       return fetch(e.request).then(function(res){
-        return caches.open(CACHE).then(function(c){
-          try{ c.put(e.request, res.clone()); }catch(err){}
-          return res;
-        });
+        if(res && res.ok){
+          var copy = res.clone();
+          caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
+        }
+        return res;
       }).catch(function(){
         return caches.match("./index.html");
       });
