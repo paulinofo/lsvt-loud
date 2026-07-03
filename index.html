@@ -98,7 +98,26 @@ function localDay(iso){ var d=new Date(iso); return d.getFullYear()+"-"+pad(d.ge
 var LS_LOG="lsvt-log", LS_SET="lsvt-settings";
 function loadLog(){ try{ return JSON.parse(localStorage.getItem(LS_LOG)||"[]"); }catch(e){ return []; } }
 function saveLog(l){ try{ localStorage.setItem(LS_LOG, JSON.stringify(l)); }catch(e){} }
-function loadSettings(){ try{ var s=JSON.parse(localStorage.getItem(LS_SET)||"{}"); return {calib:s.calib!=null?s.calib:94, targetDb:s.targetDb!=null?s.targetDb:80, reps:s.reps||{}, resetAt:s.resetAt||0, phrases:(Array.isArray(s.phrases)&&s.phrases.length)?s.phrases:null, carryDone:s.carryDone||""}; }catch(e){ return {calib:94,targetDb:80,reps:{},resetAt:0,phrases:null,carryDone:""}; } }
+function loadSettings(){
+  try{
+    var s=JSON.parse(localStorage.getItem(LS_SET)||"{}");
+    var hadCalib=s.calib!=null;
+    var out={
+      calib: hadCalib ? s.calib : 114,   // nuevo default (micrófono sin AGC lee ~20 dB más bajo)
+      targetDb: s.targetDb!=null ? s.targetDb : 80,
+      reps: s.reps||{}, resetAt: s.resetAt||0,
+      phrases: (Array.isArray(s.phrases)&&s.phrases.length)?s.phrases:null,
+      carryDone: s.carryDone||"",
+      agcCal: !!s.agcCal
+    };
+    // Migración única: al desactivar el procesamiento del micrófono el nivel bajó ~20 dB;
+    // sube la calibración de quienes ya tenían la app para seguir marcando igual que antes.
+    if(hadCalib && !out.agcCal) out.calib=clamp(out.calib+20, 70, 140);
+    out.agcCal=true;
+    if(!s.agcCal){ try{ localStorage.setItem(LS_SET, JSON.stringify(out)); }catch(e){} }
+    return out;
+  }catch(e){ return {calib:114,targetDb:80,reps:{},resetAt:0,phrases:null,carryDone:"",agcCal:true}; }
+}
 function saveSettings(s){ try{ localStorage.setItem(LS_SET, JSON.stringify(s)); }catch(e){} }
 
 // Repeticiones efectivas (con override guardado por el usuario)
@@ -1402,8 +1421,8 @@ function TunerScreen(){
   if(state._cfg){
     var cfg=el("div",{style:"margin:0 16px 12px;background:#ffffff;border-radius:14px;border:1px solid rgba(26,35,126,0.1);padding:13px 15px;display:flex;flex-direction:column;gap:12px;"});
     cfg.appendChild(cfgRow("🎯 Meta de volumen", state.settings.targetDb+" dB", function(){ state.settings.targetDb=clamp(state.settings.targetDb-5,60,100); saveSettings(state.settings); render(); }, function(){ state.settings.targetDb=clamp(state.settings.targetDb+5,60,100); saveSettings(state.settings); render(); }));
-    cfg.appendChild(cfgRow("⚖️ Calibración dB", "+"+state.settings.calib, function(){ state.settings.calib=clamp(state.settings.calib-2,70,115); saveSettings(state.settings); render(); }, function(){ state.settings.calib=clamp(state.settings.calib+2,70,115); saveSettings(state.settings); render(); }));
-    cfg.appendChild(el("div",{style:"font-size:10.5px;color:#93a0c8;line-height:1.6;"},"Los dB son estimados (el micrófono del teléfono no está calibrado). El rango objetivo es tu meta a meta+15 dB. Mantén siempre la misma distancia (~30 cm) para comparar entre sesiones."));
+    cfg.appendChild(cfgRow("⚖️ Calibración dB", "+"+state.settings.calib, function(){ state.settings.calib=clamp(state.settings.calib-2,70,140); saveSettings(state.settings); render(); }, function(){ state.settings.calib=clamp(state.settings.calib+2,70,140); saveSettings(state.settings); render(); }));
+    cfg.appendChild(el("div",{style:"font-size:10.5px;color:#93a0c8;line-height:1.6;"},"Los dB son estimados (el micrófono del teléfono no está calibrado). Para igualar la app de tu doctora: vocaliza tu voz normal y sube o baja la calibración hasta que marque lo mismo. El rango objetivo es tu meta a meta+15 dB. Mantén siempre la misma distancia (~30 cm)."));
     wrap.appendChild(cfg);
   }
 
