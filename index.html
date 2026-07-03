@@ -582,22 +582,21 @@ function HomeScreen(){
   var streak=computeStreak(state.log);
   var doneCount=Object.keys(state.done).length;
 
-  var head=el("div",{style:"padding:48px 24px 16px;text-align:center;"});
-  head.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#5a6899;text-transform:uppercase;margin-bottom:8px;"},"Terapia de Voz"));
-  head.appendChild(el("div",{style:"font-size:42px;font-weight:900;letter-spacing:-2px;color:#0a0a0a;line-height:1;"},"LSVT LOUD"));
-  head.appendChild(el("div",{style:"margin-top:10px;font-size:15px;color:#0d47a1;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
-  head.appendChild(el("div",{style:"margin-top:5px;font-size:9px;color:#93a0c8;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
+  var head=el("div",{style:"padding:calc(env(safe-area-inset-top) + 12px) 24px 8px;text-align:center;"});
+  head.appendChild(el("div",{style:"font-size:33px;font-weight:900;letter-spacing:-2px;color:#0a0a0a;line-height:1;"},"LSVT LOUD"));
+  head.appendChild(el("div",{style:"margin-top:6px;font-size:15px;color:#0d47a1;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
+  head.appendChild(el("div",{style:"margin-top:3px;font-size:9px;color:#93a0c8;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
   if(streak>0){
-    head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:rgba(230,81,0,0.1);border:1px solid rgba(230,81,0,0.35);border-radius:99px;padding:6px 16px;font-size:13px;font-weight:800;color:#e65100;"},"🔥 "+streak+(streak===1?" día":" días")+" seguidos"));
+    head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:rgba(230,81,0,0.1);border:1px solid rgba(230,81,0,0.35);border-radius:99px;padding:5px 15px;font-size:13px;font-weight:800;color:#e65100;"},"🔥 "+streak+(streak===1?" día":" días")+" seguidos"));
   }
-  var barBg=el("div",{style:"margin-top:18px;background:#dde3f3;border-radius:99px;height:5px;overflow:hidden;"});
+  var barBg=el("div",{style:"margin-top:11px;background:#dde3f3;border-radius:99px;height:5px;overflow:hidden;"});
   barBg.appendChild(el("div",{style:"height:100%;width:"+(doneCount/EXERCISES.length*100)+"%;background:linear-gradient(90deg,#0d47a1,#6a1b9a,#2e7d32);border-radius:99px;transition:width 0.6s ease;"}));
   head.appendChild(barBg);
-  head.appendChild(el("div",{style:"margin-top:7px;font-size:12px;color:#5a6899;"},doneCount+" / "+EXERCISES.length+" ejercicios completados hoy"));
+  head.appendChild(el("div",{style:"margin-top:5px;font-size:12px;color:#5a6899;"},doneCount+" / "+EXERCISES.length+" ejercicios completados hoy"));
   wrap.appendChild(head);
 
-  var nav=el("div",{style:"display:flex;gap:10px;padding:0 16px 12px;"});
-  var navCard="flex:1;background:#ffffff;border-radius:16px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;";
+  var nav=el("div",{style:"display:flex;gap:10px;padding:0 16px 8px;"});
+  var navCard="flex:1;background:#ffffff;border-radius:16px;padding:10px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;";
   var b1=btn([el("div",{style:"font-size:26px;"},"🎹"),el("div",{style:"font-size:14px;font-weight:800;color:#0a0a0a;"},"Medidor"),el("div",{style:"font-size:10.5px;color:#5a6899;"},"dB + tono + piano")], navCard+"border:1.5px solid rgba(106,27,154,0.35);", function(){go("tuner");});
   var b2=btn([el("div",{style:"font-size:26px;"},"📊"),el("div",{style:"font-size:14px;font-weight:800;color:#0a0a0a;"},"Historial"),el("div",{style:"font-size:10.5px;color:#5a6899;"},state.log.length+(state.log.length===1?" sesión":" sesiones"))], navCard+"border:1.5px solid rgba(13,71,161,0.35);", function(){go("history");});
   nav.appendChild(b1); nav.appendChild(b2);
@@ -606,18 +605,17 @@ function HomeScreen(){
   // Tarea de transferencia del día (carryover): usar la voz fuerte fuera de los ejercicios.
   var todayKey=localDay(new Date().toISOString());
   var carryDone=state.settings.carryDone===todayKey;
-  var carryWrap=el("div",{style:"padding:0 16px 12px;"});
+  var carryWrap=el("div",{style:"padding:0 16px 8px;"});
   carryWrap.appendChild(btn([
-    el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(carryDone?"#2e7d32":"#e65100")+";text-transform:uppercase;font-weight:800;margin-bottom:5px;text-align:left;"},(carryDone?"✓ HECHA · ":"🎯 ")+"TAREA DE HOY · VOZ FUERTE EN LA VIDA REAL"),
-    el("div",{style:"font-size:14px;color:"+(carryDone?"#5a6899":"#0a0a0a")+";line-height:1.55;text-align:left;font-weight:600;"+(carryDone?"text-decoration:line-through;":"")},todayCarryover()),
-    el("div",{style:"font-size:10.5px;color:#5a6899;margin-top:6px;text-align:left;"},carryDone?"¡Muy bien! Mañana habrá una nueva.":"Tócala cuando la hayas hecho")
-  ],"width:100%;background:"+(carryDone?"rgba(46,125,50,0.06)":"rgba(230,81,0,0.07)")+";border:1.5px solid "+(carryDone?"rgba(46,125,50,0.3)":"rgba(230,81,0,0.35)")+";border-radius:16px;padding:13px 16px;color:#0a0a0a;", function(){
+    el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(carryDone?"#2e7d32":"#e65100")+";text-transform:uppercase;font-weight:800;margin-bottom:4px;text-align:left;"},(carryDone?"✓ HECHA · ":"🎯 ")+"TAREA DE HOY · VOZ FUERTE EN LA VIDA REAL"),
+    el("div",{style:"font-size:14px;color:"+(carryDone?"#5a6899":"#0a0a0a")+";line-height:1.4;text-align:left;font-weight:600;"+(carryDone?"text-decoration:line-through;":"")},todayCarryover())
+  ],"width:100%;background:"+(carryDone?"rgba(46,125,50,0.06)":"rgba(230,81,0,0.07)")+";border:1.5px solid "+(carryDone?"rgba(46,125,50,0.3)":"rgba(230,81,0,0.35)")+";border-radius:16px;padding:10px 14px;color:#0a0a0a;", function(){
     state.settings.carryDone = carryDone ? "" : todayKey;
     saveSettings(state.settings); render();
   }));
   wrap.appendChild(carryWrap);
 
-  var list=el("div",{style:"padding:0 16px;display:flex;flex-direction:column;gap:10px;"});
+  var list=el("div",{style:"padding:0 16px;display:flex;flex-direction:column;gap:7px;"});
   var sess=currentSessionExercises();
   EXERCISES.forEach(function(e,i){
     var isDone=!!state.done[e.id];
@@ -629,21 +627,21 @@ function HomeScreen(){
         ])
       : el("div",{style:"font-size:20px;color:#c7cee6;"},"›");
     var row=btn([
-      el("div",{style:"width:46px;height:46px;border-radius:50%;flex-shrink:0;background:"+(isDone?e.color:"rgba(26,35,126,0.05)")+";border:"+(isDone?"none":"1.5px solid rgba(26,35,126,0.13)")+";display:flex;align-items:center;justify-content:center;font-size:"+(isDone?21:19)+"px;color:"+(isDone?"#fff":"#5a6899")+";font-weight:700;"}, isDone?"✓":e.emoji),
+      el("div",{style:"width:40px;height:40px;border-radius:50%;flex-shrink:0;background:"+(isDone?e.color:"rgba(26,35,126,0.05)")+";border:"+(isDone?"none":"1.5px solid rgba(26,35,126,0.13)")+";display:flex;align-items:center;justify-content:center;font-size:"+(isDone?20:18)+"px;color:"+(isDone?"#fff":"#5a6899")+";font-weight:700;"}, isDone?"✓":e.emoji),
       el("div",{style:"flex:1;min-width:0;"},[
-        el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(isDone?e.color:"#5a6899")+";text-transform:uppercase;margin-bottom:2px;"},e.label),
-        el("div",{style:"font-size:18px;font-weight:800;line-height:1.1;"},e.name),
-        el("div",{style:"font-size:12px;color:#5a6899;margin-top:3px;"}, e.type==="sustain"?(exReps(e)+" reps · meta "+e.target+"s"):e.type==="phrases"?(exReps(e)+" ciclos · "+exTotal(e)+" frases"):"1 párrafo")
+        el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(isDone?e.color:"#5a6899")+";text-transform:uppercase;margin-bottom:1px;"},e.label),
+        el("div",{style:"font-size:17px;font-weight:800;line-height:1.1;"},e.name),
+        el("div",{style:"font-size:12px;color:#5a6899;margin-top:2px;"}, e.type==="sustain"?(exReps(e)+" reps · meta "+e.target+"s"):e.type==="phrases"?(exReps(e)+" ciclos · "+exTotal(e)+" frases"):"1 párrafo")
       ]),
       rightEl
-    ], "display:flex;align-items:center;gap:14px;background:"+(isDone?e.color+"10":"#ffffff")+";border:1.5px solid "+(isDone?e.color+"55":"rgba(26,35,126,0.09)")+";border-radius:18px;padding:14px 16px;color:#0a0a0a;width:100%;text-align:left;", function(){ openEx(i); });
+    ], "display:flex;align-items:center;gap:12px;background:"+(isDone?e.color+"10":"#ffffff")+";border:1.5px solid "+(isDone?e.color+"55":"rgba(26,35,126,0.09)")+";border-radius:16px;padding:7px 14px;color:#0a0a0a;width:100%;text-align:left;", function(){ openEx(i); });
     row.className="card"; row.style.animationDelay=(i*0.05)+"s";
     list.appendChild(row);
   });
   wrap.appendChild(list);
 
-  var foot=el("div",{style:"text-align:center;padding:20px 24px 48px;"});
-  foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(26,35,126,0.11);border-radius:10px;padding:10px 24px;color:#5a6899;font-size:13px;", newSession));
+  var foot=el("div",{style:"text-align:center;padding:8px 24px calc(env(safe-area-inset-bottom) + 12px);"});
+  foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(26,35,126,0.11);border-radius:10px;padding:9px 22px;color:#5a6899;font-size:13px;", newSession));
   wrap.appendChild(foot);
   return wrap;
 }
