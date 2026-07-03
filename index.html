@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#060B18" />
+<meta name="apple-mobile-web-app-title" content="LSVT LOUD" />
+<title>LSVT LOUD</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif; }
+  html, body { background: #060B18; color: #F1F5F9; overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
+  #app { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+  button { font-family: inherit; cursor: pointer; }
+  ::-webkit-scrollbar { display: none; }
+  @keyframes ring { to { transform: scale(2.6); opacity: 0; } }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+  .card { animation: fadeUp 0.3s ease both; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+
+/* ─────────── Datos ─────────── */
+var EXERCISES = [
+  { id:0, name:"TONO NORMAL", label:"Ejercicio 1 · Voz cómoda", vowel:"AHHH",
+    instruction:"Inhala profundo · Vocaliza AHHH en tono normal · Lo MÁS FUERTE posible · Mantén tanto como puedas",
+    reps:15, target:8, type:"sustain", color:"#3B82F6", emoji:"🔊", pitchRole:"avg",
+    zone:{min:45,max:52,mode:"in",label:"rango normal (LA2–MI3)"} },
+  { id:1, name:"TONO ALTO", label:"Ejercicio 2 · Voz aguda", vowel:"EHHH",
+    instruction:"Inhala profundo · Vocaliza EHHH en tu tono MÁS ALTO · Lo MÁS FUERTE posible",
+    reps:5, target:5, type:"sustain", color:"#A855F7", emoji:"📢", pitchRole:"max",
+    zone:{min:55,max:77,mode:"above",label:"zona aguda (SOL3+)"} },
+  { id:2, name:"TONO GRAVE", label:"Ejercicio 3 · Voz grave", vowel:"OHHH",
+    instruction:"Inhala profundo · Vocaliza OHHH en tu tono MÁS GRAVE · Lo MÁS FUERTE posible",
+    reps:5, target:5, type:"sustain", color:"#10B981", emoji:"🔉", pitchRole:"min",
+    zone:{min:34,max:43,mode:"below",label:"zona grave (SOL2−)"} },
+  { id:3, name:"FRASES", label:"Ejercicio 4 · Voz funcional",
+    instruction:"Di cada frase EN VOZ ALTA y FUERTE · Si sientes que exageras — ¡vas bien!",
+    reps:10, type:"phrases", color:"#F59E0B", emoji:"💬",
+    phrases:["Buenos días, ¿cómo estás hoy?","Muchas gracias por tu ayuda.","Con permiso, necesito pasar.",
+      "Por favor, ¿me puedes escuchar?","Quiero hablar con voz fuerte y clara.","Hoy es un buen día para practicar.",
+      "¿Puedes repetir lo que dijiste?","Necesito agua, ¿hay por favor?","Me siento bien y con energía.",
+      "Hasta luego, que tengas un buen día."] },
+  { id:4, name:"LECTURA", label:"Ejercicio 5 · Párrafo en voz alta",
+    instruction:"Lee el párrafo EN VOZ ALTA · PIENSA: ¡VOZ FUERTE! · Imagina hablarle a alguien a 3 metros",
+    reps:1, type:"reading", color:"#EF4444", emoji:"📖",
+    text:"El mar es profundo y sereno. Las olas rompen con fuerza sobre la orilla de arena dorada. Las gaviotas vuelan alto en el cielo azul brillante. Un velero blanco cruza lentamente el horizonte. El viento sopla fresco y trae olor a sal. La naturaleza nos recuerda que la vida es bella y vale la pena vivirla con plenitud y alegría cada día." }
+];
+
+/* ─────────── Utilidades ─────────── */
+function pad(n){ return (n<10?"0":"")+n; }
+function fmtTime(s){ return pad(Math.floor(s/60))+":"+pad(s%60); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+var NOTE=["DO","DO♯","RE","RE♯","MI","FA","FA♯","SOL","SOL♯","LA","LA♯","SI"];
+function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
+function freqToMidi(f){ return 69+12*Math.log2(f/440); }
+function midiName(m){ return NOTE[((m%12)+12)%12]+(Math.floor(m/12)-1); }
+function hzToNote(hz){ return hz>0?midiName(Math.round(freqToMidi(hz))):"—"; }
+function localDay(iso){ var d=new Date(iso); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+
+var LS_LOG="lsvt-log", LS_SET="lsvt-settings";
+function loadLog(){ try{ return JSON.parse(localStorage.getItem(LS_LOG)||"[]"); }catch(e){ return []; } }
+function saveLog(l){ try{ localStorage.setItem(LS_LOG, JSON.stringify(l)); }catch(e){} }
+function loadSettings(){ try{ var s=JSON.parse(localStorage.getItem(LS_SET)||"{}"); return {calib:s.calib!=null?s.calib:94, targetDb:s.targetDb!=null?s.targetDb:80}; }catch(e){ return {calib:94,targetDb:80}; } }
+function saveSettings(s){ try{ localStorage.setItem(LS_SET, JSON.stringify(s)); }catch(e){} }
+
+function computeStreak(log){
+  if(!log.length) return 0;
+  var days={}; log.forEach(function(s){ days[localDay(s.date)]=1; });
+  var streak=0, cur=new Date();
+  function key(){ return cur.getFullYear()+"-"+pad(cur.getMonth()+1)+"-"+pad(cur.getDate()); }
+  if(!days[key()]) cur.setDate(cur.getDate()-1);
+  while(days[key()]){ streak++; cur.setDate(cur.getDate()-1); }
+  return streak;
+}
+
+/* ─────────── Estado global ─────────── */
+var state = {
+  screen:"home", exIdx:0, rep:0, phraseIdx:0, sec:0, running:false,
+  repLog:[], dbLog:[], done:{}, log:loadLog(), settings:loadSettings(),
+  sessionId:null,
+  timer:null,
+  // audio
+  micOn:false, micError:null, reading:null,
+  audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
+  history:[], repSamples:{db:[],hz:[]}
+};
+
+var app = document.getElementById("app");
+
+/* ─────────── Motor de audio ─────────── */
+function getCtx(){
+  if(!state.audioCtx){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    state.audioCtx = new AC();
+  }
+  if(state.audioCtx.state==="suspended") state.audioCtx.resume();
+  return state.audioCtx;
+}
+function playTone(midi){
+  try{
+    var ctx=getCtx(), osc=ctx.createOscillator(), g=ctx.createGain();
+    osc.type="sine"; osc.frequency.value=midiToFreq(midi);
+    var t=ctx.currentTime;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.35,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+1.5);
+    osc.connect(g).connect(ctx.destination); osc.start(t); osc.stop(t+1.6);
+  }catch(e){}
+}
+function autoCorrelate(buf, sr){
+  var SIZE=buf.length, rms=0, i, j;
+  for(i=0;i<SIZE;i++) rms+=buf[i]*buf[i];
+  rms=Math.sqrt(rms/SIZE);
+  if(rms<0.012) return {freq:-1,rms:rms};
+  var r1=0, r2=SIZE-1, thres=0.2;
+  for(i=0;i<SIZE/2;i++){ if(Math.abs(buf[i])<thres){ r1=i; break; } }
+  for(i=1;i<SIZE/2;i++){ if(Math.abs(buf[SIZE-i])<thres){ r2=SIZE-i; break; } }
+  var b2=buf.slice(r1,r2), N=b2.length;
+  if(N<32) return {freq:-1,rms:rms};
+  var c=new Float32Array(N);
+  for(i=0;i<N;i++){ var sum=0; for(j=0;j<N-i;j++) sum+=b2[j]*b2[j+i]; c[i]=sum; }
+  var d=0; while(d<N-1 && c[d]>c[d+1]) d++;
+  var maxval=-1, maxpos=-1;
+  for(i=d;i<N;i++){ if(c[i]>maxval){ maxval=c[i]; maxpos=i; } }
+  if(maxpos<=0) return {freq:-1,rms:rms};
+  var T0=maxpos, x1=c[T0-1]||0, x2=c[T0], x3=c[T0+1]||0;
+  var a=(x1+x3-2*x2)/2, bb=(x3-x1)/2;
+  if(a) T0=T0-bb/(2*a);
+  var freq=sr/T0;
+  if(freq<50||freq>1200) return {freq:-1,rms:rms};
+  return {freq:freq,rms:rms};
+}
+function startMic(cb){
+  state.micError=null;
+  // iOS CRÍTICO: crear y reanudar el AudioContext SÍNCRONAMENTE dentro del gesto (toque),
+  // ANTES de pedir el micrófono. Si se hace después del await, iOS lo bloquea.
+  var ctx;
+  try{
+    ctx=getCtx();
+    if(ctx.state==="suspended"){ ctx.resume(); }
+  }catch(e){
+    state.micError="No se pudo iniciar el audio en este navegador. Prueba abrir la app en Safari."; render(); if(cb)cb(false); return;
+  }
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    // Fallback a la API antigua (algunos WebViews)
+    var legacy=navigator.getUserMedia||navigator.webkitGetUserMedia||navigator.mozGetUserMedia;
+    if(legacy){
+      legacy.call(navigator,{audio:true}, function(st){ onStream(st); }, function(err){ onError(err); });
+      return;
+    }
+    state.micError="Este navegador no expone el micrófono (mediaDevices no existe). Abre el archivo en Safari, no dentro de otra app.";
+    render(); if(cb)cb(false); return;
+  }
+
+  navigator.mediaDevices.getUserMedia({audio:true})
+    .then(onStream).catch(onError);
+
+  function onStream(stream){
+    try{
+      state.stream=stream;
+      if(ctx.state==="suspended"){ ctx.resume(); }
+      var srcNode=ctx.createMediaStreamSource(stream);
+      var analyser=ctx.createAnalyser(); analyser.fftSize=2048;
+      srcNode.connect(analyser);
+      state.analyser=analyser; state.micOn=true;
+      var buf=new Float32Array(analyser.fftSize);
+      var byteBuf=new Uint8Array(analyser.fftSize);
+      var hasFloat=typeof analyser.getFloatTimeDomainData==="function";
+      function loop(ts){
+        state.raf=requestAnimationFrame(loop);
+        if(ts-state.lastTs<70) return;
+        state.lastTs=ts;
+        if(hasFloat) analyser.getFloatTimeDomainData(buf);
+        else { analyser.getByteTimeDomainData(byteBuf); for(var i=0;i<byteBuf.length;i++) buf[i]=(byteBuf[i]-128)/128; }
+        var res=autoCorrelate(buf, ctx.sampleRate);
+        var dbfs = res.rms>1e-7 ? 20*Math.log10(res.rms) : -120;
+        var dbRaw = clamp(dbfs+state.settings.calib, 30, 115);
+        state.smoothDb = state.smoothDb>0 ? state.smoothDb*0.55+dbRaw*0.45 : dbRaw;
+        var db=Math.round(state.smoothDb);
+        var midi=null, mf=null, cents=0, f=0;
+        if(res.freq>0){
+          state.smoothF = state.smoothF>0 ? state.smoothF*0.65+res.freq*0.35 : res.freq;
+          f=state.smoothF; mf=freqToMidi(f); midi=Math.round(mf); cents=Math.round((mf-midi)*100);
+        } else { state.smoothF=0; }
+        var s={db:db, freq:f?Math.round(f):0, midi:midi, mf:mf, cents:cents, voiced:res.freq>0};
+        state.reading=s;
+        state.history.push({db:db, mf:mf});
+        if(state.history.length>110) state.history.shift();
+        if(state.running){
+          if(db>=55) state.repSamples.db.push(db);
+          if(s.voiced && s.freq>0) state.repSamples.hz.push(s.freq);
+        }
+        updateLive();
+      }
+      state.raf=requestAnimationFrame(loop);
+      render(); if(cb)cb(true);
+    }catch(e){
+      state.micError="Micrófono conectado pero falló el procesamiento de audio: "+(e.message||e)+".";
+      state.micOn=false; render(); if(cb)cb(false);
+    }
+  }
+
+  function onError(err){
+    var name=(err&&err.name)||"Error";
+    var msg;
+    if(name==="NotAllowedError"||name==="SecurityError")
+      msg="Permiso denegado. Toca 🎤 otra vez y elige Permitir. Si no aparece: Ajustes → Safari → Micrófono → Permitir, y recarga.";
+    else if(name==="NotFoundError"||name==="OverconstrainedError")
+      msg="No se encontró micrófono disponible en el dispositivo.";
+    else if(name==="NotReadableError")
+      msg="El micrófono está siendo usado por otra app. Ciérrala e intenta de nuevo.";
+    else
+      msg="No se pudo acceder al micrófono ("+name+"). Abre el archivo en Safari, no dentro de otra app.";
+    state.micError=msg;
+    state.micOn=false; render(); if(cb)cb(false);
+  }
+}
+function stopMic(){
+  if(state.raf) cancelAnimationFrame(state.raf);
+  if(state.stream){ state.stream.getTracks().forEach(function(t){ t.stop(); }); state.stream=null; }
+  state.smoothF=0; state.smoothDb=0; state.micOn=false; state.reading=null;
+  render();
+}
+
+/* ─────────── Zonas ─────────── */
+function dbZone(db, targetDb){
+  if(db==null || db<52) return {key:"silent",label:"· · · VOCALIZA",color:"#334155",msg:""};
+  if(db<targetDb) return {key:"low",label:"⬇ BAJO",color:"#F59E0B",msg:"¡MÁS FUERTE!"};
+  if(db<=targetDb+15) return {key:"ok",label:"✓ EN RANGO",color:"#10B981",msg:"¡MANTÉN ASÍ!"};
+  return {key:"high",label:"⬆ MUY FUERTE",color:"#A855F7",msg:"potente — sin tensar"};
+}
+function pitchStatus(mf, z){
+  if(mf==null||!z) return null;
+  if(z.mode==="above") return mf>=z.min?{ok:true,txt:"✓ agudo"}:{ok:false,txt:"⬆ sube más"};
+  if(z.mode==="below") return mf<=z.max?{ok:true,txt:"✓ grave"}:{ok:false,txt:"⬇ baja más"};
+  if(mf<z.min) return {ok:false,txt:"⬇ muy grave"};
+  if(mf>z.max) return {ok:false,txt:"⬆ muy agudo"};
+  return {ok:true,txt:"✓ normal"};
+}
+
+/* ─────────── Helpers DOM ─────────── */
+function el(tag, attrs, children){
+  var e=document.createElement(tag);
+  if(attrs){ for(var k in attrs){
+    if(k==="style") e.style.cssText=attrs[k];
+    else if(k==="class") e.className=attrs[k];
+    else if(k==="html") e.innerHTML=attrs[k];
+    else e.setAttribute(k, attrs[k]);
+  }}
+  if(children!=null){
+    (Array.isArray(children)?children:[children]).forEach(function(c){
+      if(c==null||c===false) return;
+      e.appendChild(typeof c==="string"||typeof c==="number"?document.createTextNode(String(c)):c);
+    });
+  }
+  return e;
+}
+function btn(txt, style, onClick){
+  var b=el("button",{style:style},txt); b.addEventListener("click",onClick); return b;
+}
+
+var BIG_BTN="border:none;border-radius:18px;padding:20px;font-size:19px;font-weight:800;color:#fff;width:100%;letter-spacing:0.5px;";
+var BACK_BTN="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:11px;padding:8px 15px;color:#94A3B8;font-size:24px;line-height:1;flex-shrink:0;";
+var STAT_BOX="flex:1;background:#0D1525;border-radius:14px;padding:10px 8px;text-align:center;";
+var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#475569;text-transform:uppercase;margin-bottom:4px;";
+
+/* ─────────── Navegación ─────────── */
+function go(screen){ if(screen==="home"||screen==="history"){ if(state.micOn) stopMic(); } state.screen=screen; render(); }
+function openEx(i){ state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false; state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render(); }
+function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
+function newSession(){ if(state.micOn) stopMic(); state.done={}; state.sessionId=null; state.screen="home"; render(); }
+
+function recordExercise(exId, stats){
+  if(!state.sessionId){ state.sessionId=Date.now(); state.log.push({id:state.sessionId,date:new Date().toISOString(),exercises:{}}); }
+  for(var i=0;i<state.log.length;i++){ if(state.log[i].id===state.sessionId){ state.log[i].exercises[exId]=stats; break; } }
+  saveLog(state.log);
+}
+function finishEx(exId){
+  state.done[exId]=true;
+  if(state.micOn) stopMic();
+  if(Object.keys(state.done).length>=EXERCISES.length) state.screen="done";
+  else state.screen="home";
+  render();
+}
+
+/* ─────────── Cronómetro ─────────── */
+function tickStart(){
+  // Pedir micrófono PRIMERO, aún dentro del gesto del toque (clave en iOS).
+  if(!state.micOn){ startMic(function(){}); }
+  state.sec=0; state.running=true;
+  state.repSamples={db:[],hz:[]}; state.history=[];
+  if(state.timer) clearInterval(state.timer);
+  state.timer=setInterval(function(){ state.sec++; updateTimer(); }, 1000);
+  render();
+}
+function repDone(){
+  state.running=false;
+  if(state.timer){ clearInterval(state.timer); state.timer=null; }
+  var ex=EXERCISES[state.exIdx];
+  state.repLog.push(state.sec);
+  var db=state.repSamples.db, hz=state.repSamples.hz, audio=null;
+  if(db.length){
+    var onTarget=db.filter(function(d){return d>=state.settings.targetDb;}).length;
+    audio={ avgDb:Math.round(db.reduce(function(a,b){return a+b;},0)/db.length),
+      maxDb:Math.max.apply(null,db),
+      pctOnTarget:Math.round(onTarget/db.length*100),
+      minHz:hz.length?Math.min.apply(null,hz):0,
+      maxHz:hz.length?Math.max.apply(null,hz):0,
+      avgHz:hz.length?hz.reduce(function(a,b){return a+b;},0)/hz.length:0 };
+  }
+  state.dbLog.push(audio);
+  if(state.rep+1>=ex.reps){
+    var avg=Math.round(state.repLog.reduce(function(a,b){return a+b;},0)/state.repLog.length);
+    var best=Math.max.apply(null,state.repLog);
+    var stats={type:"sustain",name:ex.name,reps:state.repLog.length,avg:avg,best:best};
+    var wa=state.dbLog.filter(Boolean);
+    if(wa.length){
+      stats.avgDb=Math.round(wa.reduce(function(a,r){return a+r.avgDb;},0)/wa.length);
+      stats.maxDb=Math.max.apply(null,wa.map(function(r){return r.maxDb;}));
+      var pcts=wa.map(function(r){return r.pctOnTarget;}).filter(function(v){return v!=null;});
+      if(pcts.length) stats.pctDb=Math.round(pcts.reduce(function(a,b){return a+b;},0)/pcts.length);
+      var mins=wa.map(function(r){return r.minHz;}).filter(function(v){return v>0;});
+      var maxs=wa.map(function(r){return r.maxHz;}).filter(function(v){return v>0;});
+      var avgs=wa.map(function(r){return r.avgHz;}).filter(function(v){return v>0;});
+      if(ex.pitchRole==="max"&&maxs.length){ var h=Math.max.apply(null,maxs); stats.pitch={note:hzToNote(h),hz:Math.round(h)}; }
+      else if(ex.pitchRole==="min"&&mins.length){ var h2=Math.min.apply(null,mins); stats.pitch={note:hzToNote(h2),hz:Math.round(h2)}; }
+      else if(avgs.length){ var h3=avgs.reduce(function(a,b){return a+b;},0)/avgs.length; stats.pitch={note:hzToNote(h3),hz:Math.round(h3)}; }
+    }
+    recordExercise(ex.id, stats);
+    finishEx(ex.id);
+  } else {
+    state.rep++; state.sec=0; render();
+  }
+}
+
+/* ─────────── Render principal ─────────── */
+function render(){
+  app.innerHTML="";
+  var s=state.screen;
+  if(s==="home") app.appendChild(HomeScreen());
+  else if(s==="tuner") app.appendChild(TunerScreen());
+  else if(s==="history") app.appendChild(HistoryScreen());
+  else if(s==="done") app.appendChild(DoneScreen());
+  else if(s==="ex"){
+    var ex=EXERCISES[state.exIdx];
+    if(ex.type==="sustain") app.appendChild(SustainScreen());
+    else if(ex.type==="phrases") app.appendChild(PhraseScreen());
+    else if(ex.type==="reading") app.appendChild(ReadScreen());
+  }
+}
+
+/* ─────────── Inicio ─────────── */
+function HomeScreen(){
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
+  var streak=computeStreak(state.log);
+  var doneCount=Object.keys(state.done).length;
+
+  var head=el("div",{style:"padding:48px 24px 16px;text-align:center;"});
+  head.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#475569;text-transform:uppercase;margin-bottom:8px;"},"Terapia de Voz"));
+  head.appendChild(el("div",{style:"font-size:42px;font-weight:900;letter-spacing:-2px;color:#F8FAFC;line-height:1;"},"LSVT LOUD"));
+  head.appendChild(el("div",{style:"margin-top:10px;font-size:15px;color:#3B82F6;font-weight:700;letter-spacing:1px;"},"💬 PIENSA EN VOZ ALTA"));
+  if(streak>0){
+    head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:99px;padding:6px 16px;font-size:13px;font-weight:800;color:#F59E0B;"},"🔥 "+streak+(streak===1?" día":" días")+" seguidos"));
+  }
+  var barBg=el("div",{style:"margin-top:18px;background:#0F1829;border-radius:99px;height:5px;overflow:hidden;"});
+  barBg.appendChild(el("div",{style:"height:100%;width:"+(doneCount/EXERCISES.length*100)+"%;background:linear-gradient(90deg,#3B82F6,#A855F7,#10B981);border-radius:99px;transition:width 0.6s ease;"}));
+  head.appendChild(barBg);
+  head.appendChild(el("div",{style:"margin-top:7px;font-size:12px;color:#475569;"},doneCount+" / "+EXERCISES.length+" ejercicios completados hoy"));
+  wrap.appendChild(head);
+
+  var nav=el("div",{style:"display:flex;gap:10px;padding:0 16px 12px;"});
+  var navCard="flex:1;background:#0D1525;border-radius:16px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;";
+  var b1=btn([el("div",{style:"font-size:26px;"},"🎹"),el("div",{style:"font-size:14px;font-weight:800;color:#F1F5F9;"},"Medidor"),el("div",{style:"font-size:10.5px;color:#64748B;"},"dB + tono + piano")], navCard+"border:1.5px solid rgba(168,85,247,0.35);", function(){go("tuner");});
+  var b2=btn([el("div",{style:"font-size:26px;"},"📊"),el("div",{style:"font-size:14px;font-weight:800;color:#F1F5F9;"},"Historial"),el("div",{style:"font-size:10.5px;color:#64748B;"},state.log.length+(state.log.length===1?" sesión":" sesiones"))], navCard+"border:1.5px solid rgba(59,130,246,0.35);", function(){go("history");});
+  nav.appendChild(b1); nav.appendChild(b2);
+  wrap.appendChild(nav);
+
+  var list=el("div",{style:"padding:0 16px;display:flex;flex-direction:column;gap:10px;"});
+  EXERCISES.forEach(function(e,i){
+    var isDone=!!state.done[e.id];
+    var row=btn([
+      el("div",{style:"width:46px;height:46px;border-radius:50%;flex-shrink:0;background:"+(isDone?e.color:"rgba(255,255,255,0.04)")+";border:"+(isDone?"none":"1.5px solid rgba(255,255,255,0.1)")+";display:flex;align-items:center;justify-content:center;font-size:"+(isDone?21:19)+"px;color:"+(isDone?"#fff":"#64748B")+";font-weight:700;"}, isDone?"✓":e.emoji),
+      el("div",{style:"flex:1;min-width:0;"},[
+        el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(isDone?e.color:"#475569")+";text-transform:uppercase;margin-bottom:2px;"},e.label),
+        el("div",{style:"font-size:18px;font-weight:800;line-height:1.1;"},e.name),
+        el("div",{style:"font-size:12px;color:#475569;margin-top:3px;"}, e.type==="sustain"?(e.reps+" reps · meta "+e.target+"s"):e.type==="phrases"?(e.reps+" frases"):"1 párrafo")
+      ]),
+      el("div",{style:"font-size:20px;color:#1E293B;"},"›")
+    ], "display:flex;align-items:center;gap:14px;background:"+(isDone?e.color+"10":"#0D1525")+";border:1.5px solid "+(isDone?e.color+"55":"rgba(255,255,255,0.06)")+";border-radius:18px;padding:14px 16px;color:#F1F5F9;width:100%;text-align:left;", function(){ openEx(i); });
+    row.className="card"; row.style.animationDelay=(i*0.05)+"s";
+    list.appendChild(row);
+  });
+  wrap.appendChild(list);
+
+  var foot=el("div",{style:"text-align:center;padding:20px 24px 48px;"});
+  foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 24px;color:#475569;font-size:13px;", newSession));
+  wrap.appendChild(foot);
+  return wrap;
+}
+
+/* ─────────── Termómetro (SVG) ─────────── */
+function thermometerSVG(db, targetDb, micOn, running){
+  var MIN=40,MAX=105,W=70,H=250,TW=44,r=TW/2;
+  var tx0=(W-TW)/2, tx1=tx0+TW, ty0=8, ty1=H-8;
+  function pct(v){ return clamp((v-MIN)/(MAX-MIN),0,1); }
+  function y(p){ return ty1-p*(ty1-ty0); }
+  var zone=dbZone(db,targetDb);
+  var fill = (db!=null&&db>=45)?pct(db):0;
+  var svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="opacity:'+(micOn?1:0.4)+';transition:opacity .3s;">';
+  // tube bg
+  svg+='<rect x="'+tx0+'" y="'+ty0+'" width="'+TW+'" height="'+(ty1-ty0)+'" rx="'+r+'" fill="#0A1020" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>';
+  // zone bands
+  function bandRect(p0,p1,color,op){
+    var yy=y(p1), hh=y(p0)-y(p1);
+    return '<rect x="'+(tx0+2)+'" y="'+yy+'" width="'+(TW-4)+'" height="'+hh+'" fill="'+color+'" opacity="'+op+'"/>';
+  }
+  var t=pct(targetDb);
+  svg+='<clipPath id="tube"><rect x="'+(tx0+2)+'" y="'+(ty0+2)+'" width="'+(TW-4)+'" height="'+(ty1-ty0-4)+'" rx="'+(r-2)+'"/></clipPath>';
+  svg+='<g clip-path="url(#tube)">';
+  svg+=bandRect(0,t,"#F59E0B",0.16);
+  svg+=bandRect(t,pct(targetDb+15),"#10B981",0.20);
+  svg+=bandRect(pct(targetDb+15),1,"#A855F7",0.16);
+  // fill
+  if(fill>0){
+    svg+='<rect x="'+(tx0+2)+'" y="'+y(fill)+'" width="'+(TW-4)+'" height="'+(y(0)-y(fill))+'" fill="'+zone.color+'" opacity="0.85"/>';
+    svg+='<rect x="'+(tx0+2)+'" y="'+(y(fill)-2)+'" width="'+(TW-4)+'" height="4" fill="'+zone.color+'"/>';
+  }
+  svg+='</g>';
+  // meta dashed line
+  svg+='<line x1="'+(tx0-6)+'" y1="'+y(t)+'" x2="'+(tx1+6)+'" y2="'+y(t)+'" stroke="#F8FAFC" stroke-width="2.5" stroke-dasharray="5 4" opacity="0.85"/>';
+  // ticks
+  [60,80,100].forEach(function(gv){
+    svg+='<text x="'+(tx1-2)+'" y="'+(y(pct(gv))+3)+'" font-size="8.5" font-weight="800" fill="rgba(255,255,255,0.4)" text-anchor="end">'+gv+'</text>';
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+/* ─────────── Gráfica en vivo (dB+tono) ─────────── */
+function liveGraphSVG(history, targetDb, ex){
+  var W=300,HDB=110,HP=46,CAP=110;
+  function dbY(db){ return HDB-clamp((db-40)/(105-40),0,1)*HDB; }
+  var pMin=33,pMax=78;
+  function pY(mf){ return HP-clamp((mf-pMin)/(pMax-pMin),0,1)*HP; }
+  function X(i){ return i/(CAP-1)*W; }
+  var last=history.length?history[history.length-1]:null;
+  var okTop=dbY(targetDb+15), okBot=dbY(targetDb);
+  var svg='<svg width="100%" height="'+HDB+'" viewBox="0 0 '+W+' '+HDB+'" preserveAspectRatio="none" style="display:block;">';
+  svg+='<rect x="0" y="'+okTop+'" width="'+W+'" height="'+Math.max(0,okBot-okTop)+'" fill="rgba(16,185,129,0.14)"/>';
+  svg+='<line x1="0" x2="'+W+'" y1="'+okBot+'" y2="'+okBot+'" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5 4"/>';
+  [60,80,100].forEach(function(g){ svg+='<line x1="0" x2="'+W+'" y1="'+dbY(g)+'" y2="'+dbY(g)+'" stroke="rgba(255,255,255,0.05)"/><text x="3" y="'+(dbY(g)-2.5)+'" font-size="8" fill="#334155" font-weight="700">'+g+'</text>'; });
+  if(history.length>1){
+    var pts=history.map(function(h,i){ return X(i).toFixed(1)+","+dbY(h.db).toFixed(1); }).join(" ");
+    svg+='<polyline points="'+pts+'" fill="none" stroke="#F8FAFC" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+  }
+  if(last){ var z=dbZone(last.db,targetDb); svg+='<circle cx="'+X(history.length-1)+'" cy="'+dbY(last.db)+'" r="4.5" fill="'+z.color+'"/>'; }
+  svg+='</svg>';
+
+  // pitch lane
+  var z2=ex.zone, bandTop,bandBot;
+  if(z2.mode==="above"){ bandTop=pY(pMax); bandBot=pY(z2.min); }
+  else if(z2.mode==="below"){ bandTop=pY(z2.max); bandBot=pY(pMin); }
+  else { bandTop=pY(z2.max); bandBot=pY(z2.min); }
+  var svg2='<svg width="100%" height="'+HP+'" viewBox="0 0 '+W+' '+HP+'" preserveAspectRatio="none" style="display:block;">';
+  svg2+='<rect x="0" y="'+bandTop+'" width="'+W+'" height="'+Math.max(0,bandBot-bandTop)+'" fill="'+ex.color+'22"/>';
+  var seg=[], cur=[];
+  history.forEach(function(h,i){ if(h.mf!=null) cur.push(X(i).toFixed(1)+","+pY(h.mf).toFixed(1)); else { if(cur.length>1) seg.push(cur.join(" ")); cur=[]; } });
+  if(cur.length>1) seg.push(cur.join(" "));
+  seg.forEach(function(sp){ svg2+='<polyline points="'+sp+'" fill="none" stroke="#C4B5FD" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
+  if(last&&last.mf!=null) svg2+='<circle cx="'+X(history.length-1)+'" cy="'+pY(last.mf)+'" r="3.8" fill="#A855F7"/>';
+  svg2+='</svg>';
+
+  var box=el("div",{style:"background:#0A1020;border-radius:16px;border:1px solid rgba(255,255,255,0.06);padding:10px 10px 8px;width:100%;"});
+  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#475569;font-weight:700;padding:0 2px 4px;"},[el("span",null,"🔊 VOLUMEN (dB)"),el("span",{style:"color:#10B981;"},"■ rango "+targetDb+"–"+(targetDb+15))]));
+  box.appendChild(el("div",{html:svg}));
+  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#475569;font-weight:700;padding:8px 2px 4px;border-top:1px solid rgba(255,255,255,0.05);margin-top:6px;"},[el("span",null,"♪ TONO"),el("span",{style:"color:"+ex.color+";"},"■ "+ex.zone.label)]));
+  box.appendChild(el("div",{html:svg2}));
+  return box;
+}
+
+/* ─────────── Ejercicio sostenido ─────────── */
+var _liveNodes={};
+function SustainScreen(){
+  var ex=EXERCISES[state.exIdx];
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
+
+  // header
+  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 8px;"});
+  header.appendChild(btn("‹",BACK_BTN,goHome));
+  header.appendChild(el("div",{style:"flex:1;"},[
+    el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},ex.name),
+    el("div",{style:"font-size:14px;color:#475569;"},"Repetición "+(state.rep+1)+" de "+ex.reps)
+  ]));
+  var micBtn=btn(state.micOn?"🎤 ON":"🎤 Medir",
+    "background:"+(state.micOn?"rgba(16,185,129,0.12)":"rgba(168,85,247,0.12)")+";border:1.5px solid "+(state.micOn?"#10B981":"#A855F7")+";border-radius:12px;padding:8px 12px;color:"+(state.micOn?"#10B981":"#A855F7")+";font-size:12.5px;font-weight:800;flex-shrink:0;",
+    function(){ if(state.micOn) stopMic(); else startMic(function(){}); });
+  header.appendChild(micBtn);
+  wrap.appendChild(header);
+
+  if(state.micError){
+    var errBox=el("div",{style:"margin:4px 16px 6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#FBBF24;line-height:1.6;"});
+    errBox.appendChild(el("div",{html:"⚠️ "+state.micError+" El cronómetro funciona sin micrófono."}));
+    errBox.appendChild(btn("🔄 Reintentar","display:block;margin-top:8px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.5);border-radius:8px;padding:7px 14px;color:#FBBF24;font-weight:800;font-size:12px;",function(){ startMic(function(){}); }));
+    wrap.appendChild(errBox);
+  }
+
+  // dots
+  var dots=el("div",{style:"display:flex;justify-content:center;align-items:center;gap:5px;padding:2px 20px 0;flex-wrap:wrap;"});
+  for(var i=0;i<ex.reps;i++){
+    dots.appendChild(el("div",{style:"border-radius:50%;background:"+(i<state.rep?ex.color:i===state.rep?"#F8FAFC":"rgba(255,255,255,0.1)")+";width:"+(i===state.rep?13:8)+"px;height:"+(i===state.rep?13:8)+"px;"}));
+  }
+  wrap.appendChild(dots);
+
+  var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:10px 18px 0;"});
+
+  // Fila termómetro + datos
+  var rowTop=el("div",{style:"display:flex;gap:14px;align-items:stretch;"});
+  var thermo=el("div",{id:"thermo"});
+  thermo.innerHTML=thermometerSVG(state.reading?state.reading.db:null, state.settings.targetDb, state.micOn, state.running);
+  rowTop.appendChild(thermo);
+
+  var right=el("div",{style:"flex:1;display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:0;"});
+  right.appendChild(el("div",{style:"font-size:11px;font-weight:800;color:"+ex.color+";letter-spacing:2px;"},"VOCALIZA: "+ex.vowel));
+  var dbRow=el("div",{id:"dbRow",style:"display:flex;align-items:baseline;gap:5px;"});
+  right.appendChild(dbRow);
+  var zoneLine=el("div",{id:"zoneLine",style:"font-size:14px;font-weight:900;letter-spacing:0.5px;min-height:18px;"});
+  right.appendChild(zoneLine);
+  var noteLine=el("div",{id:"noteLine",style:"font-size:16px;font-weight:900;"});
+  right.appendChild(noteLine);
+  var timerEl=el("div",{id:"timerEl",style:"font-size:42px;font-weight:900;letter-spacing:-2px;line-height:1;margin-top:2px;"});
+  right.appendChild(timerEl);
+  var metaLine=el("div",{id:"metaLine",style:"font-size:10px;letter-spacing:1.5px;font-weight:700;"});
+  right.appendChild(metaLine);
+  rowTop.appendChild(right);
+  body.appendChild(rowTop);
+  _liveNodes={thermo:thermo,dbRow:dbRow,zoneLine:zoneLine,noteLine:noteLine,timerEl:timerEl,metaLine:metaLine,graph:null};
+  updateLiveDOM();
+
+  // mic off prompts
+  if(!state.micOn && !state.micError){
+    var actBtn=btn([el("div",null,"🎤 ACTIVAR TERMÓMETRO DE VOLUMEN"),el("div",{style:"font-size:10.5px;font-weight:600;color:#64748B;margin-top:3px;"},"(también se activa solo al tocar ▶ INICIAR)")],
+      "margin-top:10px;width:100%;background:rgba(168,85,247,0.12);border:1.5px solid #A855F7;border-radius:14px;padding:13px;color:#C4B5FD;font-size:14px;font-weight:800;", function(){ startMic(function(){}); });
+    body.appendChild(actBtn);
+    body.appendChild(el("div",{style:"margin-top:10px;font-size:12px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
+  }
+
+  // live graph
+  if(state.micOn){
+    var gWrap=el("div",{id:"graphWrap",style:"margin-top:10px;"});
+    gWrap.appendChild(liveGraphSVG(state.history, state.settings.targetDb, ex));
+    gWrap.appendChild(el("div",{style:"font-size:10.5px;color:#334155;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
+    body.appendChild(gWrap);
+    _liveNodes.graph=gWrap;
+  }
+
+  // stats
+  var dbSoFar=state.dbLog.filter(Boolean);
+  if(state.repLog.length>0 || dbSoFar.length>0){
+    var stats=el("div",{style:"display:flex;gap:8px;margin-top:12px;width:100%;"});
+    if(state.repLog.length>0){
+      var avg=Math.round(state.repLog.reduce(function(a,b){return a+b;},0)/state.repLog.length);
+      var best=Math.max.apply(null,state.repLog);
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"PROM"),el("div",{style:"font-size:22px;font-weight:900;color:#F8FAFC;"},avg+"s")]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"MEJOR"),el("div",{style:"font-size:22px;font-weight:900;color:"+ex.color+";"},best+"s")]));
+    }
+    if(dbSoFar.length){
+      var maxDb=Math.max.apply(null,dbSoFar.map(function(d){return d.maxDb;}));
+      var pct=Math.round(dbSoFar.reduce(function(a,d){return a+(d.pctOnTarget||0);},0)/dbSoFar.length);
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"dB MÁX"),el("div",{style:"font-size:22px;font-weight:900;color:#10B981;"},String(maxDb))]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"% RANGO"),el("div",{style:"font-size:22px;font-weight:900;color:"+(pct>=50?"#10B981":"#F59E0B")+";"},pct+"%")]));
+    }
+    body.appendChild(stats);
+  }
+  wrap.appendChild(body);
+
+  // action button
+  var foot=el("div",{style:"padding:14px 20px 44px;"});
+  if(!state.running){
+    foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  SIGUIENTE REP", BIG_BTN+"background:"+ex.color+";", tickStart));
+  } else {
+    var hit=state.sec>=ex.target;
+    foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:"+(hit?"#10B981":"#141E30")+";border:2px solid "+(hit?"#10B981":"rgba(255,255,255,0.08)")+";", repDone));
+  }
+  wrap.appendChild(foot);
+  return wrap;
+}
+
+// Actualización ligera durante mic (sin re-render completo)
+function updateLive(){
+  if(state.screen==="ex" && EXERCISES[state.exIdx].type==="sustain") updateLiveDOM();
+  else if(state.screen==="tuner") updateTunerDOM();
+}
+function updateLiveDOM(){
+  if(!_liveNodes.thermo) return;
+  var ex=EXERCISES[state.exIdx];
+  var r=state.reading, td=state.settings.targetDb;
+  var zone=dbZone(r?r.db:null, td);
+  _liveNodes.thermo.innerHTML=thermometerSVG(r?r.db:null, td, state.micOn, state.running);
+  _liveNodes.dbRow.innerHTML="";
+  _liveNodes.dbRow.appendChild(el("div",{style:"font-size:58px;font-weight:900;line-height:1;letter-spacing:-3px;color:"+((state.micOn&&zone.key!=="silent")?zone.color:"#1E293B")+";"}, (state.micOn&&r&&r.db>=45)?String(r.db):"——"));
+  _liveNodes.dbRow.appendChild(el("div",{style:"font-size:13px;color:#64748B;font-weight:800;"},"dB"));
+  _liveNodes.zoneLine.textContent=state.micOn?(zone.label+(zone.msg?" · "+zone.msg:"")):"🎤 apagado";
+  _liveNodes.zoneLine.style.color=state.micOn?zone.color:"#334155";
+  _liveNodes.zoneLine.style.animation=(state.micOn&&state.running&&zone.key==="low")?"blink 1s ease infinite":"none";
+  var pStat=r?pitchStatus(r.mf,ex.zone):null;
+  _liveNodes.noteLine.innerHTML="";
+  _liveNodes.noteLine.appendChild(el("span",{style:"color:"+((r&&r.midi!=null)?"#C4B5FD":"#1E293B")+";"}, (r&&r.midi!=null)?("♪ "+midiName(r.midi)):"♪ ——"));
+  if(pStat) _liveNodes.noteLine.appendChild(el("span",{style:"font-size:11px;font-weight:800;margin-left:7px;color:"+(pStat.ok?"#10B981":"#F59E0B")+";"},pStat.txt));
+  var hit=state.sec>=ex.target;
+  _liveNodes.timerEl.textContent=fmtTime(state.sec);
+  _liveNodes.timerEl.style.color=hit?"#10B981":state.running?"#F8FAFC":"#1E293B";
+  _liveNodes.metaLine.textContent=hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+td+" dB");
+  _liveNodes.metaLine.style.color=hit?"#10B981":"#334155";
+  if(_liveNodes.graph && state.micOn){
+    _liveNodes.graph.innerHTML="";
+    _liveNodes.graph.appendChild(liveGraphSVG(state.history, td, ex));
+    _liveNodes.graph.appendChild(el("div",{style:"font-size:10.5px;color:#334155;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
+  }
+}
+function updateTimer(){ if(_liveNodes.timerEl){ var ex=EXERCISES[state.exIdx]; var hit=state.sec>=ex.target; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#10B981":state.running?"#F8FAFC":"#1E293B"; _liveNodes.metaLine.textContent=hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+state.settings.targetDb+" dB"); _liveNodes.metaLine.style.color=hit?"#10B981":"#334155"; } }
+
+/* ─────────── Frases ─────────── */
+function PhraseScreen(){
+  var ex=EXERCISES[state.exIdx];
+  var isLast=state.phraseIdx===ex.phrases.length-1;
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
+  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 16px;"});
+  header.appendChild(btn("‹",BACK_BTN,goHome));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#475569;"},"Frase "+(state.phraseIdx+1)+" de "+ex.reps)]));
+  wrap.appendChild(header);
+  var barBg=el("div",{style:"margin:0 20px 28px;height:4px;background:#0F1829;border-radius:99px;overflow:hidden;"});
+  barBg.appendChild(el("div",{style:"height:100%;width:"+(state.phraseIdx/ex.phrases.length*100)+"%;background:"+ex.color+";border-radius:99px;"}));
+  wrap.appendChild(barBg);
+  var body=el("div",{style:"flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 20px;"});
+  body.appendChild(el("div",{style:"font-size:12px;letter-spacing:3px;color:"+ex.color+";margin-bottom:20px;font-weight:700;"},"📢 DI EN VOZ ALTA"));
+  var carta=el("div",{class:"card",style:"background:#0D1525;border-radius:20px;border:1.5px solid "+ex.color+"35;padding:36px 28px;width:100%;"});
+  carta.appendChild(el("div",{style:"font-size:26px;font-weight:800;color:#F1F5F9;line-height:1.5;text-align:center;"},'"'+ex.phrases[state.phraseIdx]+'"'));
+  body.appendChild(carta);
+  body.appendChild(el("div",{style:"margin-top:20px;font-size:13px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
+  wrap.appendChild(body);
+  var foot=el("div",{style:"padding:0 20px 44px;"});
+  foot.appendChild(btn(isLast?"✓  Completar ejercicio":"Siguiente frase  ›", BIG_BTN+"background:"+ex.color+";", function(){
+    if(isLast){ recordExercise(ex.id,{type:"phrases",name:ex.name,reps:ex.reps}); finishEx(ex.id); }
+    else { state.phraseIdx++; render(); }
+  }));
+  wrap.appendChild(foot);
+  return wrap;
+}
+
+/* ─────────── Lectura ─────────── */
+function ReadScreen(){
+  var ex=EXERCISES[state.exIdx];
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
+  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 20px;"});
+  header.appendChild(btn("‹",BACK_BTN,goHome));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"LECTURA EN VOZ ALTA"),el("div",{style:"font-size:14px;color:#475569;"},"Lee el párrafo completo")]));
+  wrap.appendChild(header);
+  var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:0 20px;"});
+  body.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";margin-bottom:16px;font-weight:700;text-align:center;"},"📖 VOZ ALTA · IMAGINA HABLARLE A ALGUIEN A 3 METROS"));
+  var carta=el("div",{style:"background:#0D1525;border-radius:20px;border:1.5px solid "+ex.color+"30;padding:28px 24px;"});
+  carta.appendChild(el("div",{style:"font-size:20px;color:#CBD5E1;line-height:2;"},ex.text));
+  body.appendChild(carta);
+  body.appendChild(el("div",{style:"margin-top:16px;font-size:13px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
+  wrap.appendChild(body);
+  var foot=el("div",{style:"padding:24px 20px 44px;"});
+  foot.appendChild(btn("✓  Lectura completa", BIG_BTN+"background:"+ex.color+";", function(){ recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
+  wrap.appendChild(foot);
+  return wrap;
+}
+
+/* ─────────── Completado ─────────── */
+function DoneScreen(){
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;align-items:center;justify-content:center;text-align:center;padding:40px 32px;"});
+  wrap.appendChild(el("div",{style:"font-size:84px;line-height:1;margin-bottom:24px;"},"🎉"));
+  wrap.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#10B981;margin-bottom:10px;text-transform:uppercase;"},"Sesión completada"));
+  wrap.appendChild(el("div",{style:"font-size:32px;font-weight:900;color:#F8FAFC;line-height:1.15;margin-bottom:18px;"},"¡Excelente trabajo hoy!"));
+  wrap.appendChild(el("div",{style:"font-size:15px;color:#64748B;line-height:2;margin-bottom:14px;",html:"Completaste los "+EXERCISES.length+" ejercicios.<br><span style='color:#3B82F6;font-weight:700;'>✓ Sesión guardada en tu iPhone</span><br><span style='color:#10B981;font-weight:800;'>¡PIENSA SIEMPRE EN VOZ ALTA!</span>"}));
+  var box=el("div",{style:"display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;margin-top:24px;"});
+  box.appendChild(btn("📊 Ver mi historial", BIG_BTN+"background:#0D1525;border:1.5px solid rgba(59,130,246,0.4);font-size:16px;padding:16px;", function(){go("history");}));
+  box.appendChild(btn("Nueva sesión", BIG_BTN+"background:#10B981;font-size:16px;padding:16px;", newSession));
+  wrap.appendChild(box);
+  return wrap;
+}
+
+/* ─────────── Historial ─────────── */
+function chartCard(title, note, data, mn, mx, goal, color){
+  var box=el("div",{style:"margin:0 16px 14px;background:#0D1525;border-radius:16px;padding:16px 16px 12px;border:1px solid rgba(255,255,255,0.05);"});
+  box.appendChild(el("div",{style:"font-size:10px;letter-spacing:2px;color:"+color+";text-transform:uppercase;margin-bottom:12px;"},title));
+  var bars=el("div",{style:"display:flex;align-items:flex-end;gap:5px;height:88px;"});
+  data.forEach(function(d){
+    var h=Math.max(8,clamp((d.v-mn)/(mx-mn),0,1)*100);
+    var ok=d.v>=goal;
+    bars.appendChild(el("div",{style:"flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;"},[
+      el("div",{style:"font-size:9px;color:#64748B;font-weight:700;"},String(d.v)),
+      el("div",{style:"width:100%;height:"+h+"%;border-radius:5px 5px 0 0;background:"+(ok?"linear-gradient(180deg,#10B981,#059669)":"linear-gradient(180deg,"+color+","+color+"99)")+";"})
+    ]));
+  });
+  box.appendChild(bars);
+  box.appendChild(el("div",{style:"font-size:9.5px;color:#334155;margin-top:8px;text-align:center;"},note+" · Últimas "+data.length+" sesiones"));
+  return box;
+}
+function HistoryScreen(){
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
+  var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 18px;"});
+  header.appendChild(btn("‹",BACK_BTN,goHome));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:#3B82F6;text-transform:uppercase;margin-bottom:2px;"},"MI PROGRESO"),el("div",{style:"font-size:22px;font-weight:900;color:#F8FAFC;"},"Historial")]));
+  wrap.appendChild(header);
+
+  var streak=computeStreak(state.log);
+  var uniq={}; state.log.forEach(function(s){uniq[localDay(s.date)]=1;});
+  var sum=el("div",{style:"display:flex;gap:10px;padding:0 16px 14px;"});
+  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"SESIONES"),el("div",{style:"font-size:26px;font-weight:900;color:#F8FAFC;"},String(state.log.length))]));
+  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"RACHA"),el("div",{style:"font-size:26px;font-weight:900;color:#F59E0B;"},"🔥 "+streak)]));
+  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"DÍAS ÚNICOS"),el("div",{style:"font-size:26px;font-weight:900;color:#10B981;"},String(Object.keys(uniq).length))]));
+  wrap.appendChild(sum);
+
+  var secData=state.log.filter(function(s){return s.exercises&&s.exercises[0];}).sort(function(a,b){return a.id-b.id;}).slice(-12);
+  var dbData=state.log.filter(function(s){return s.exercises&&s.exercises[0]&&s.exercises[0].avgDb;}).sort(function(a,b){return a.id-b.id;}).slice(-12);
+  if(secData.length) wrap.appendChild(chartCard("⏱ Duración promedio AHHH (seg)","Verde = meta de 8s alcanzada",secData.map(function(s){return {v:s.exercises[0].avg};}),0,15,8,"#3B82F6"));
+  if(dbData.length) wrap.appendChild(chartCard("🔊 Volumen promedio AHHH (dB)","Verde = meta de "+state.settings.targetDb+" dB",dbData.map(function(s){return {v:s.exercises[0].avgDb};}),55,100,state.settings.targetDb,"#A855F7"));
+
+  var list=el("div",{style:"flex:1;padding:0 16px;display:flex;flex-direction:column;gap:8px;"});
+  var sorted=state.log.slice().sort(function(a,b){return b.id-a.id;});
+  if(!sorted.length){
+    list.appendChild(el("div",{style:"text-align:center;color:#334155;font-size:14px;padding:40px 20px;line-height:1.8;",html:"Aún no hay sesiones registradas.<br>Completa un ejercicio y aparecerá aquí. 💪"}));
+  }
+  sorted.forEach(function(s){
+    var exs=s.exercises||{}, count=Object.keys(exs).length, complete=count>=EXERCISES.length;
+    var d=new Date(s.date);
+    var fdate=d.toLocaleDateString("es-MX",{weekday:"short",day:"numeric",month:"short"});
+    var fhour=d.toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+    var parts=[];
+    if(exs[0]){ var p="AHHH "+exs[0].avg+"s"; if(exs[0].avgDb) p+=" · "+exs[0].avgDb+" dB"; if(exs[0].pctDb!=null) p+=" · "+exs[0].pctDb+"% rango"; parts.push(p); }
+    if(exs[1]&&exs[1].pitch) parts.push("↑ "+exs[1].pitch.note);
+    if(exs[2]&&exs[2].pitch) parts.push("↓ "+exs[2].pitch.note);
+    var dots=el("div",{style:"display:flex;gap:3px;"});
+    EXERCISES.forEach(function(e){ dots.appendChild(el("div",{style:"width:7px;height:7px;border-radius:50%;background:"+(exs[e.id]?e.color:"rgba(255,255,255,0.08)")+";"})); });
+    list.appendChild(el("div",{style:"background:#0D1525;border-radius:14px;padding:13px 15px;border:1px solid "+(complete?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.05)")+";display:flex;align-items:center;gap:12px;"},[
+      el("div",{style:"width:40px;height:40px;border-radius:11px;flex-shrink:0;background:"+(complete?"rgba(16,185,129,0.12)":"rgba(255,255,255,0.03)")+";display:flex;align-items:center;justify-content:center;font-size:18px;"},complete?"🏆":"📝"),
+      el("div",{style:"flex:1;min-width:0;"},[
+        el("div",{style:"font-size:14px;font-weight:800;color:#F1F5F9;text-transform:capitalize;"},fdate+" · "+fhour),
+        el("div",{style:"font-size:11.5px;color:#475569;margin-top:2px;line-height:1.5;"},count+"/"+EXERCISES.length+" ejercicios"+(parts.length?"  ·  "+parts.join("  ·  "):""))
+      ]),
+      dots
+    ]));
+  });
+  wrap.appendChild(list);
+
+  if(state.log.length>0){
+    var foot=el("div",{style:"text-align:center;padding:18px 24px 44px;"});
+    foot.appendChild(btn("Borrar historial","background:none;border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:10px 24px;color:#7F1D1D;font-size:13px;", function(){
+      if(confirm("¿Borrar todo el historial? Esta acción no se puede deshacer.")){ state.log=[]; saveLog(state.log); state.sessionId=null; render(); }
+    }));
+    wrap.appendChild(foot);
+  }
+  return wrap;
+}
+
+/* ─────────── Medidor / Piano ─────────── */
+function TunerScreen(){
+  var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
+  var header=el("div",{style:"display:flex;align-items:center;gap:10px;padding:48px 20px 12px;"});
+  header.appendChild(btn("‹",BACK_BTN,goHome));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:#A855F7;text-transform:uppercase;margin-bottom:2px;"},"MEDIDOR DE VOZ"),el("div",{style:"font-size:21px;font-weight:900;color:#F8FAFC;"},"🎹 dB + Tono")]));
+  header.appendChild(btn("⚙️",BACK_BTN+"font-size:16px;padding:9px 12px;", function(){ state._cfg=!state._cfg; render(); }));
+  header.appendChild(btn(state.micOn?"⏹":"🎤","background:"+(state.micOn?"rgba(239,68,68,0.15)":"rgba(168,85,247,0.15)")+";border:1.5px solid "+(state.micOn?"#EF4444":"#A855F7")+";border-radius:12px;padding:9px 13px;color:"+(state.micOn?"#EF4444":"#A855F7")+";font-size:13px;font-weight:800;flex-shrink:0;", function(){ if(state.micOn) stopMic(); else startMic(function(){}); }));
+  wrap.appendChild(header);
+
+  if(state.micError){
+    wrap.appendChild(el("div",{style:"margin:0 16px 10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:11px 14px;font-size:12px;color:#FBBF24;line-height:1.55;",html:"⚠️ "+state.micError}));
+  }
+
+  if(state._cfg){
+    var cfg=el("div",{style:"margin:0 16px 12px;background:#0D1525;border-radius:14px;border:1px solid rgba(255,255,255,0.07);padding:13px 15px;display:flex;flex-direction:column;gap:12px;"});
+    cfg.appendChild(cfgRow("🎯 Meta de volumen", state.settings.targetDb+" dB", function(){ state.settings.targetDb=clamp(state.settings.targetDb-5,60,100); saveSettings(state.settings); render(); }, function(){ state.settings.targetDb=clamp(state.settings.targetDb+5,60,100); saveSettings(state.settings); render(); }));
+    cfg.appendChild(cfgRow("⚖️ Calibración dB", "+"+state.settings.calib, function(){ state.settings.calib=clamp(state.settings.calib-2,70,115); saveSettings(state.settings); render(); }, function(){ state.settings.calib=clamp(state.settings.calib+2,70,115); saveSettings(state.settings); render(); }));
+    cfg.appendChild(el("div",{style:"font-size:10.5px;color:#334155;line-height:1.6;"},"Los dB son estimados (el micrófono del teléfono no está calibrado). El rango objetivo es tu meta a meta+15 dB. Mantén siempre la misma distancia (~30 cm) para comparar entre sesiones."));
+    wrap.appendChild(cfg);
+  }
+
+  var r=state.reading, td=state.settings.targetDb;
+  var zone=dbZone(r?r.db:null, td);
+  var activeMidi=(r&&r.midi!=null)?r.midi:null;
+
+  // display cards
+  var volCard=el("div",{style:"flex:1.1;background:#0D1525;border-radius:18px;padding:16px 10px;border:1.5px solid "+(zone.key!=="silent"?zone.color+"70":"rgba(255,255,255,0.06)")+";text-align:center;"});
+  var volNum=el("div",{style:"font-size:54px;font-weight:900;line-height:1;letter-spacing:-2px;color:"+(zone.key!=="silent"?zone.color:"#1E293B")+";"}, (r&&r.db>=45)?String(r.db):"——");
+  var volLabel=el("div",{style:"font-size:11px;font-weight:800;margin-top:4px;color:"+(zone.key!=="silent"?zone.color:"#64748B")+";"}, zone.key!=="silent"?zone.label:"dB est.");
+  volCard.appendChild(el("div",{style:"font-size:9.5px;letter-spacing:2px;color:#475569;margin-bottom:4px;"},"VOLUMEN"));
+  volCard.appendChild(volNum); volCard.appendChild(volLabel);
+
+  var noteCard=el("div",{style:"flex:1;background:#0D1525;border-radius:18px;padding:16px 10px;border:1.5px solid rgba(168,85,247,0.25);text-align:center;"});
+  var noteNum=el("div",{style:"font-size:40px;font-weight:900;line-height:1.3;letter-spacing:-1px;color:"+(activeMidi!=null?"#A855F7":"#1E293B")+";"}, activeMidi!=null?midiName(activeMidi):"——");
+  var noteFreq=el("div",{style:"font-size:11px;color:#64748B;font-weight:700;margin-top:3px;"}, (r&&r.freq)?(r.freq+" Hz"):"· · ·");
+  noteCard.appendChild(el("div",{style:"font-size:9.5px;letter-spacing:2px;color:#475569;margin-bottom:4px;"},"NOTA"));
+  noteCard.appendChild(noteNum); noteCard.appendChild(noteFreq);
+
+  var cards=el("div",{style:"display:flex;gap:10px;padding:4px 16px 0;align-items:stretch;"});
+  cards.appendChild(volCard); cards.appendChild(noteCard);
+  wrap.appendChild(cards);
+
+  // dB bar
+  var dbPct=r?clamp((r.db-40)/(105-40),0,1)*100:0;
+  var tPct=clamp((td-40)/(105-40),0,1)*100;
+  var barWrap=el("div",{style:"padding:12px 20px 0;"});
+  var bar=el("div",{style:"position:relative;height:14px;background:#0F1829;border-radius:99px;"});
+  var barFill=el("div",{style:"position:absolute;left:0;top:0;bottom:0;width:"+dbPct+"%;border-radius:99px;background:"+((zone.key==="ok"||zone.key==="high")?"linear-gradient(90deg,#3B82F6,#10B981)":"linear-gradient(90deg,#3B82F6,#A855F7)")+";"});
+  bar.appendChild(barFill);
+  bar.appendChild(el("div",{style:"position:absolute;left:"+tPct+"%;top:-4px;bottom:-4px;width:3px;background:#F59E0B;border-radius:2px;transform:translateX(-50%);"}));
+  barWrap.appendChild(bar);
+  wrap.appendChild(barWrap);
+
+  // piano
+  var pianoKeys={};
+  var pianoWrap=el("div",{style:"flex:1;display:flex;flex-direction:column;justify-content:center;"});
+  var scroller=el("div",{style:"overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 4px;"});
+  var kb=el("div",{style:"display:flex;position:relative;width:max-content;margin:0 auto;"});
+  var WHITE_W=34, BLACK_W=21;
+  var blackSet={1:1,3:1,6:1,8:1,10:1};
+  for(var m=36;m<=76;m++){
+    if(blackSet[m%12]) continue;
+    var isActive=activeMidi===m;
+    var isDO=(m%12===0);
+    var container=el("div",{style:"position:relative;"});
+    (function(mm){
+      var whiteSpan=el("span",{style:"font-size:8.5px;font-weight:800;color:"+(isActive?"#fff":isDO?"#7C3AED":"#94A3B8")+";"}, (isDO||isActive)?midiName(mm):"");
+      var white=btn(whiteSpan,
+        "width:"+WHITE_W+"px;height:138px;background:"+(isActive?"#A855F7":"#F1F5F9")+";border:1px solid #0B1120;border-radius:0 0 6px 6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;", function(){ playTone(mm); });
+      container.appendChild(white);
+      pianoKeys[mm]={btn:white,span:whiteSpan,isDO:isDO,black:false};
+      var nb=mm+1;
+      if(blackSet[nb%12]){
+        var blackActive=activeMidi===nb;
+        var black=btn("", "position:absolute;top:0;right:-"+(BLACK_W/2)+"px;width:"+BLACK_W+"px;height:86px;z-index:2;background:"+(blackActive?"#A855F7":"#0B1120")+";border:1px solid #000;border-radius:0 0 5px 5px;", function(e){ e.stopPropagation(); playTone(nb); });
+        container.appendChild(black);
+        pianoKeys[nb]={btn:black,black:true};
+      }
+    })(m);
+    kb.appendChild(container);
+  }
+  scroller.appendChild(kb);
+  pianoWrap.appendChild(scroller);
+
+  _tunerNodes={volCard:volCard,volNum:volNum,volLabel:volLabel,noteNum:noteNum,noteFreq:noteFreq,barFill:barFill,keys:pianoKeys,activeMidi:activeMidi};
+
+  var guide=el("div",{style:"display:flex;gap:8px;justify-content:center;padding:10px 16px 0;flex-wrap:wrap;"});
+  [["🔉 Grave","DO2 – SOL2","#10B981"],["🗣️ Habla","LA2 – MI3","#3B82F6"],["📢 Agudo","SOL3 +","#A855F7"]].forEach(function(g){
+    guide.appendChild(el("div",{style:"background:"+g[2]+"10;border:1px solid "+g[2]+"30;border-radius:10px;padding:6px 12px;font-size:11px;color:"+g[2]+";font-weight:700;",html:g[0]+" <span style='color:#64748B;font-weight:500;'>"+g[1]+"</span>"}));
+  });
+  pianoWrap.appendChild(guide);
+  pianoWrap.appendChild(el("div",{style:"font-size:11.5px;color:#334155;text-align:center;padding:10px 28px 38px;line-height:1.7;",html:"💡 <b style='color:#475569;'>Toca una tecla</b> para escuchar el tono · <b style='color:#475569;'>🎤</b> para medir tu voz · 📏 ~30 cm"}));
+  wrap.appendChild(pianoWrap);
+  return wrap;
+}
+// Actualización ligera del Medidor durante mic (sin re-render completo)
+var _tunerNodes={};
+function updateTunerDOM(){
+  if(!_tunerNodes.volNum) return;
+  var r=state.reading, td=state.settings.targetDb;
+  var zone=dbZone(r?r.db:null, td);
+  var activeMidi=(r&&r.midi!=null)?r.midi:null;
+  // tarjeta volumen
+  _tunerNodes.volCard.style.borderColor=(zone.key!=="silent"?zone.color+"70":"rgba(255,255,255,0.06)");
+  _tunerNodes.volNum.textContent=(r&&r.db>=45)?String(r.db):"——";
+  _tunerNodes.volNum.style.color=(zone.key!=="silent"?zone.color:"#1E293B");
+  _tunerNodes.volLabel.textContent=zone.key!=="silent"?zone.label:"dB est.";
+  _tunerNodes.volLabel.style.color=(zone.key!=="silent"?zone.color:"#64748B");
+  // tarjeta nota
+  _tunerNodes.noteNum.textContent=activeMidi!=null?midiName(activeMidi):"——";
+  _tunerNodes.noteNum.style.color=(activeMidi!=null?"#A855F7":"#1E293B");
+  _tunerNodes.noteFreq.textContent=(r&&r.freq)?(r.freq+" Hz"):"· · ·";
+  // barra dB
+  var dbPct=r?clamp((r.db-40)/(105-40),0,1)*100:0;
+  _tunerNodes.barFill.style.width=dbPct+"%";
+  _tunerNodes.barFill.style.background=(zone.key==="ok"||zone.key==="high")?"linear-gradient(90deg,#3B82F6,#10B981)":"linear-gradient(90deg,#3B82F6,#A855F7)";
+  // piano: resaltar tecla activa
+  if(_tunerNodes.activeMidi!==activeMidi){
+    var prev=_tunerNodes.activeMidi, keys=_tunerNodes.keys;
+    if(prev!=null && keys[prev]){ setKeyActive(keys[prev],prev,false); }
+    if(activeMidi!=null && keys[activeMidi]){ setKeyActive(keys[activeMidi],activeMidi,true); }
+    _tunerNodes.activeMidi=activeMidi;
+  }
+}
+function setKeyActive(k,midi,on){
+  if(k.black){
+    k.btn.style.background=on?"#A855F7":"#0B1120";
+  } else {
+    k.btn.style.background=on?"#A855F7":"#F1F5F9";
+    k.span.textContent=(k.isDO||on)?midiName(midi):"";
+    k.span.style.color=on?"#fff":k.isDO?"#7C3AED":"#94A3B8";
+  }
+}
+function cfgRow(label, value, onDec, onInc){
+  var b="width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#F1F5F9;font-size:18px;font-weight:800;";
+  return el("div",{style:"display:flex;align-items:center;gap:10px;"},[
+    el("div",{style:"flex:1;font-size:13px;color:#94A3B8;font-weight:600;"},label),
+    btn("−",b,onDec),
+    el("div",{style:"min-width:62px;text-align:center;font-size:15px;font-weight:900;color:#F8FAFC;"},value),
+    btn("+",b,onInc)
+  ]);
+}
+
+/* ─────────── Arranque ─────────── */
+// Detección de contexto: iOS solo da micrófono en https o file:// (contexto seguro).
+state.secureOk = (typeof window.isSecureContext === "undefined") ? true : (window.isSecureContext || location.protocol === "file:");
+if(!state.secureOk){
+  state.micError="Esta página no está en un contexto seguro (https o archivo local). El micrófono estará bloqueado. Abre el archivo directamente en Safari (file://) o sírvelo por https.";
+}
+render();
+
+// Service Worker: guarda la app para uso offline
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
