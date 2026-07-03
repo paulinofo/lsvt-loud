@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+ju<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="theme-color" content="#060B18" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="theme-color" content="#eef1fa" />
 <meta name="apple-mobile-web-app-title" content="LSVT LOUD" />
 <title>LSVT LOUD</title>
 <link rel="manifest" href="manifest.webmanifest" />
@@ -13,7 +13,7 @@
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif; }
-  html, body { background: #060B18; color: #F1F5F9; overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
+  html, body { background: #eef1fa; color: #1a237e; overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
   #app { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
   button { font-family: inherit; cursor: pointer; }
   ::-webkit-scrollbar { display: none; }
@@ -33,36 +33,36 @@
 var EXERCISES = [
   { id:0, name:"TONO NORMAL", label:"Ejercicio 1 · Voz cómoda", vowel:"AHHH",
     instruction:"Inhala profundo · Vocaliza AHHH en tono normal · Lo MÁS FUERTE posible · Mantén tanto como puedas",
-    reps:15, target:8, type:"sustain", color:"#3B82F6", emoji:"🔊", pitchRole:"avg",
+    reps:15, target:8, type:"sustain", color:"#0d47a1", emoji:"🔊", pitchRole:"avg",
     zone:{min:45,max:52,mode:"in",label:"rango normal (LA2–MI3)"} },
   { id:1, name:"TONO ALTO", label:"Ejercicio 2 · Voz aguda", vowel:"AHHH",
     instruction:"Inhala profundo · Empieza AHHH en tu tono normal y SUBE deslizando · Sostén tu tono MÁS ALTO · Lo MÁS FUERTE posible",
-    reps:15, target:5, type:"sustain", color:"#A855F7", emoji:"📢", pitchRole:"max",
+    reps:15, target:5, type:"sustain", color:"#6a1b9a", emoji:"📢", pitchRole:"max",
     zone:{min:55,max:77,mode:"above",label:"zona aguda (SOL3+)"} },
   { id:2, name:"TONO GRAVE", label:"Ejercicio 3 · Voz grave", vowel:"AHHH",
     instruction:"Inhala profundo · Empieza AHHH en tu tono normal y BAJA deslizando · Sostén tu tono MÁS GRAVE · Lo MÁS FUERTE posible",
-    reps:15, target:5, type:"sustain", color:"#10B981", emoji:"🔉", pitchRole:"min",
+    reps:15, target:5, type:"sustain", color:"#2e7d32", emoji:"🔉", pitchRole:"min",
     zone:{min:34,max:43,mode:"below",label:"zona grave (SOL2−)"} },
   { id:3, name:"FRASES", label:"Ejercicio 4 · Voz funcional",
     instruction:"Di cada frase EN VOZ ALTA y FUERTE · Si sientes que exageras — ¡vas bien!",
-    reps:5, type:"phrases", color:"#F59E0B", emoji:"💬",
+    reps:5, type:"phrases", color:"#e65100", emoji:"💬",
     phrases:["Buenos días, ¿cómo estás hoy?","Muchas gracias por tu ayuda.","Con permiso, necesito pasar.",
       "Por favor, ¿me puedes escuchar?","Quiero hablar con voz fuerte y clara.","Hoy es un buen día para practicar.",
       "¿Puedes repetir lo que dijiste?","Necesito agua, ¿hay por favor?","Me siento bien y con energía.",
       "Hasta luego, que tengas un buen día."] },
   { id:4, name:"LECTURA", label:"Ejercicio 5 · Párrafo en voz alta",
     instruction:"Lee el párrafo EN VOZ ALTA · PIENSA: ¡VOZ FUERTE! · Imagina hablarle a alguien a 3 metros",
-    reps:1, type:"reading", color:"#EF4444", emoji:"📖",
-    text:"La resiliencia no es la ausencia de dificultades, sino la fuerza para crecer a través de ellas. Como el bambú que se dobla con el viento sin quebrarse, quien se adapta encuentra firmeza donde otros solo ven obstáculos. Adaptarse al cambio no es rendirse ante él, sino aprender su lenguaje. El río no lucha contra la roca: la rodea con paciencia, la pule y sigue su camino hacia el mar. Así, una mente flexible convierte cada revés en una lección y cada caída en un nuevo punto de partida. La superación empieza con un solo paso y con una sola voz que se atreve a decir: puedo intentarlo otra vez. No importa cuántas veces caigamos, sino cuántas elegimos levantarnos. La verdadera fortaleza no está en no doblarse jamás, sino en volver a erguirse, más sabios y más serenos, después de cada tormenta. Cada día es una nueva oportunidad para reinventarnos, para hablar con claridad y avanzar con valentía hacia aquello que soñamos." }
+    reps:1, type:"reading", color:"#c62828", emoji:"📖" }
 ];
 
-/* ─────────── Lecturas rotativas (superación / resiliencia / adaptabilidad) ─────────── */
+/* ─────────── Lecturas rotativas (superación / resiliencia / adaptabilidad) ───────────
+   Cada texto tiene ~600 palabras: leído en voz alta con calma dura ~5 minutos. */
 var READINGS=[
-  {titulo:"Resiliencia y adaptación", texto:"La resiliencia no es la ausencia de dificultades, sino la fuerza para crecer a través de ellas. Como el bambú que se dobla con el viento sin quebrarse, quien se adapta encuentra firmeza donde otros solo ven obstáculos. Adaptarse al cambio no es rendirse ante él, sino aprender su lenguaje. El río no lucha contra la roca: la rodea con paciencia, la pule y sigue su camino hacia el mar. Así, una mente flexible convierte cada revés en una lección y cada caída en un nuevo punto de partida. La superación empieza con un solo paso y con una sola voz que se atreve a decir: puedo intentarlo otra vez. No importa cuántas veces caigamos, sino cuántas elegimos levantarnos. La verdadera fortaleza no está en no doblarse jamás, sino en volver a erguirse, más sabios y más serenos, después de cada tormenta."},
-  {titulo:"El viento del cambio", texto:"El mundo cambia sin pedir permiso, y con él debemos aprender a movernos. Adaptarse no significa perder quiénes somos, sino descubrir nuevas formas de seguir siendo nosotros mismos. Las especies que sobreviven no son las más fuertes ni las más rápidas, sino las que mejor responden al cambio. Lo mismo ocurre con las personas: quien abraza lo nuevo con curiosidad encuentra puertas donde otros ven muros. Cada final esconde un comienzo, y cada camino cerrado nos invita a trazar uno propio. Cuando sopla el viento del cambio, algunos construyen muros y otros construyen molinos. Elijamos crear, aprender y crecer, convencidos de que nuestra mayor fortaleza es la capacidad de reinventarnos una y otra vez."},
-  {titulo:"El arte de superarse", texto:"Toda gran conquista comenzó como un pequeño intento. Nadie nace sabiendo caminar, hablar o vencer sus miedos; todo se aprende paso a paso, con paciencia y constancia. La superación no es un destino, sino un camino que recorremos cada día al elegir ser un poco mejores que ayer. Habrá tropiezos, dudas y cansancio, pero cada esfuerzo deja una huella y cada práctica nos acerca a la meta. Confía en tu voz, en tu cuerpo y en tu mente, porque dentro de ti habita una fuerza capaz de sorprenderte. Levántate, respira hondo y da el siguiente paso: el progreso pertenece a quienes se atreven a intentarlo."},
-  {titulo:"Gota a gota", texto:"La perseverancia es el arte de continuar cuando todo invita a detenerse. El agua, gota a gota, perfora la piedra más dura; no por su fuerza, sino por su constancia. Así también nosotros alcanzamos lo que parecía imposible: con repetición, disciplina y paciencia. Los grandes logros rara vez llegan de golpe; se construyen con pequeños pasos sostenidos en el tiempo. Cuando sientas que avanzas despacio, recuerda que incluso el paso más lento te acerca, mientras que rendirse te aleja para siempre. Sigue adelante con calma y determinación, porque la meta no es de quien corre más rápido, sino de quien nunca deja de caminar."},
-  {titulo:"La actitud lo cambia todo", texto:"La actitud con la que enfrentamos la vida transforma por completo lo que vivimos. No podemos elegir todas las circunstancias, pero siempre podemos elegir cómo responder a ellas. Una sonrisa, una palabra amable o un pensamiento esperanzador tienen el poder de cambiar un día entero. El optimismo no ignora las dificultades: las mira de frente y decide buscar una salida. Cada mañana es una página en blanco esperando ser escrita con valentía y entusiasmo. Cuida tus pensamientos, alimenta tu esperanza y habla con fuerza y claridad, porque quien cree en sí mismo ya ha dado el primer paso hacia el éxito."}
+  {titulo:"Resiliencia y adaptación", texto:"La resiliencia no es la ausencia de dificultades, sino la fuerza para crecer a través de ellas. Como el bambú que se dobla con el viento sin quebrarse, quien se adapta encuentra firmeza donde otros solo ven obstáculos. Adaptarse al cambio no es rendirse ante él, sino aprender su lenguaje. El río no lucha contra la roca: la rodea con paciencia, la pule y sigue su camino hacia el mar. Así, una mente flexible convierte cada revés en una lección y cada caída en un nuevo punto de partida.\n\nPiensa en el árbol que crece en la ladera de la montaña. El viento lo golpea todos los días, y sin embargo sus raíces se hacen más profundas precisamente por ese viento. Las tormentas no lo destruyen: lo obligan a sostenerse mejor. Con las personas ocurre lo mismo. Cada dificultad que enfrentamos con calma y decisión fortalece algo dentro de nosotros que ninguna comodidad podría fortalecer. Nadie elige las tormentas, pero todos podemos elegir echar raíces más hondas.\n\nLas personas resilientes no nacen así: se hacen, día tras día, con actos pequeños. Se hacen cuando deciden levantarse diez minutos antes para cuidar su salud. Se hacen cuando repiten un ejercicio aunque el progreso parezca lento. Se hacen cuando piden ayuda sin vergüenza, porque saben que apoyarse en otros también es una forma de fuerza. La resiliencia se construye igual que un muro firme: colocando una piedra cada día, sin prisa, pero sin pausa.\n\nAdaptarse también es un acto de valentía. Cuesta soltar la manera antigua de hacer las cosas, cuesta aceptar que el cuerpo o las circunstancias cambiaron. Pero quien se adapta no pierde: transforma. El marinero no puede controlar el viento, aunque sí puede ajustar las velas. Ajustar las velas no es rendirse; es seguir navegando hacia el mismo destino por un camino nuevo. Cada persona que aprende una nueva forma de hacer lo de siempre está demostrando una inteligencia que solo da la vida vivida.\n\nLa vida de cada persona guarda capítulos difíciles que en su momento parecieron imposibles de superar. Y sin embargo, aquí estamos: los superamos, aprendimos, seguimos adelante. Ese es el mejor recordatorio cuando llega una dificultad nueva. Ya lo hicimos antes. Ya nos levantamos antes. La memoria de nuestras propias victorias es un tesoro que nadie nos puede quitar, y volver a ella nos da fuerzas cuando el ánimo flaquea.\n\nLa serenidad también se entrena, y su puerta de entrada es la respiración. Cuando el aire entra lento y profundo, el cuerpo entero recibe el mensaje de que no hay peligro: los músculos se sueltan, la mente se ordena y la voz encuentra apoyo firme. Antes de cada tarea difícil, tres respiraciones hondas obran pequeños milagros. No es casualidad que todas las tradiciones del mundo, desde los monjes hasta los deportistas de élite, comiencen igual: respirando con calma. Quien domina su respiración lleva consigo un refugio portátil, disponible en cualquier lugar y a cualquier hora, gratuito y silencioso. Y desde ese refugio todo se enfrenta mejor: las noticias inesperadas, los días torcidos y también, por supuesto, cada ejercicio de voz que pide aire generoso y ánimo tranquilo.\n\nHoy, al leer estas palabras en voz alta y fuerte, estás practicando exactamente eso: resiliencia. Cada frase dicha con energía es una pequeña victoria sobre la comodidad del silencio. No importa si ayer costó más o si mañana costará un poco: lo que importa es que hoy tu voz suena, clara y fuerte, y que cada día de práctica es una raíz más profunda. La verdadera fortaleza no está en no doblarse jamás, sino en volver a erguirse, más sabios y más serenos, después de cada tormenta."},
+  {titulo:"El viento del cambio", texto:"El mundo cambia sin pedir permiso, y con él debemos aprender a movernos. Adaptarse no significa perder quiénes somos, sino descubrir nuevas formas de seguir siendo nosotros mismos. Las especies que sobreviven no son las más fuertes ni las más rápidas, sino las que mejor responden al cambio. Lo mismo ocurre con las personas: quien abraza lo nuevo con curiosidad encuentra puertas donde otros ven muros.\n\nHay un proverbio que dice: cuando sopla el viento del cambio, algunos construyen muros y otros construyen molinos. El muro y el molino se hacen con las mismas piedras; la diferencia está en la intención. El que construye muros gasta su energía en detener lo inevitable. El que construye molinos usa esa misma energía para moler su trigo, para crear algo útil, para avanzar. Ante cada cambio, grande o pequeño, tenemos esa elección: muro o molino, resistencia o aprovechamiento.\n\nCambiar de costumbres a cualquier edad es posible, y la ciencia lo confirma: el cerebro humano sigue aprendiendo toda la vida. Cada vez que practicamos algo nuevo, se crean conexiones que antes no existían. Por eso ningún día de práctica se pierde, aunque no se note de inmediato. Por dentro, silenciosamente, el cuerpo y la mente están construyendo caminos nuevos. La constancia es el arquitecto invisible de todas nuestras capacidades.\n\nMira hacia atrás y cuenta cuántas veces ya te has reinventado. Aprendiste a caminar cayéndote. Aprendiste un oficio empezando desde cero. Te adaptaste a ciudades, a personas, a épocas distintas. Cada etapa de la vida exigió una versión nueva de ti, y siempre la encontraste. Esta etapa no es diferente: pide paciencia, pide práctica, pide voz fuerte y ánimo firme, y tú ya sabes cómo se hace, porque llevas toda la vida haciéndolo.\n\nEl cambio también trae regalos que solo se ven con el tiempo. Una dificultad nos enseña quiénes son los que de verdad nos acompañan. Un tropiezo nos vuelve más comprensivos con los tropiezos ajenos. Una limitación nueva nos descubre fuerzas que no sabíamos que teníamos. No se trata de negar lo difícil, sino de no quedarse ciego a lo bueno que viene mezclado con ello. La vida rara vez da páginas completamente oscuras.\n\nLa curiosidad es la mejor compañera de la adaptación. El que pregunta, el que quiere saber cómo funciona lo nuevo, el que prueba sin miedo a equivocarse, mantiene el espíritu joven aunque pasen los años. Aprender una palabra nueva, un juego nuevo, una receta nueva: cada pequeño aprendizaje es una ventana abierta que deja entrar aire fresco a la casa. Los estudiosos de la longevidad coinciden en que las personas que llegan lúcidas y alegres a edades avanzadas comparten un rasgo: nunca dejaron de interesarse por el mundo. La curiosidad no cuesta dinero ni exige fuerzas extraordinarias; solo pide mirar lo desconocido con ojos de explorador y no de juez. Quien conserva viva la pregunta «¿y esto cómo será?» tiene garantizada una vida interesante, se adapte a lo que se tenga que adaptar.\n\nHoy tu tarea es simple y poderosa: leer fuerte, respirar hondo, y recordar que cada palabra dicha con energía es un molino girando a tu favor. Elijamos crear, aprender y crecer, convencidos de que nuestra mayor fortaleza es la capacidad de reinventarnos una y otra vez. El viento va a soplar de todos modos: que nos encuentre construyendo molinos, con la frente en alto y la voz sonando clara, fuerte y segura."},
+  {titulo:"El arte de superarse", texto:"Toda gran conquista comenzó como un pequeño intento. Nadie nace sabiendo caminar, hablar o vencer sus miedos; todo se aprende paso a paso, con paciencia y constancia. La superación no es un destino, sino un camino que recorremos cada día al elegir ser un poco mejores que ayer. Habrá tropiezos, dudas y cansancio, pero cada esfuerzo deja una huella y cada práctica nos acerca a la meta.\n\nLos grandes maestros de cualquier arte repiten lo mismo: el talento importa menos que la práctica. El pianista toca escalas todos los días, aunque ya sea famoso. El atleta entrena la misma salida mil veces, aunque ya haya ganado medallas. Lo extraordinario no nace de hacer cosas extraordinarias de vez en cuando, sino de hacer cosas ordinarias con extraordinaria constancia. Practicar la voz cada día es exactamente eso: el entrenamiento silencioso de un campeón.\n\nHay días buenos y días difíciles, y los dos valen. El día bueno confirma el progreso; el día difícil construye el carácter. Cuando el ejercicio sale con facilidad, celebramos. Cuando cuesta más, no significa retroceso: significa que ese día el entrenamiento contó doble. El cuerpo tiene sus ritmos, el ánimo tiene sus mareas, y el que sigue practicando a pesar de las mareas es el que llega más lejos. No se le pide al mar que esté siempre en calma; se aprende a navegar en todas sus aguas.\n\nCompararse con otros es una trampa; compararse con uno mismo es una brújula. La única pregunta que importa no es si alguien lo hace mejor, sino: ¿lo hago un poco mejor que el mes pasado? ¿Mi voz suena más fuerte que cuando empecé? ¿Me atrevo hoy a cosas que antes evitaba? Esas pequeñas victorias personales, sumadas, forman lo que después llamamos una gran superación. El progreso se mide en semanas y meses, no en minutos.\n\nTambién es importante celebrar. Cada ejercicio terminado merece un reconocimiento, aunque sea íntimo y breve: lo hice, cumplí, aquí estoy. La disciplina sin celebración se vuelve gris y se abandona; la disciplina celebrada se convierte en orgullo y se sostiene sola. Quien aprende a felicitarse por los pasos pequeños descubre que el camino largo se hace mucho más ligero y hasta disfrutable.\n\nNadie se supera completamente solo. Detrás de cada persona que avanza hay manos que aplauden, voces que animan y compañía que sostiene. Aceptar apoyo no resta mérito: lo multiplica, porque convierte el esfuerzo propio en una obra compartida. Contarle a la familia los avances, presumir un buen resultado, pedir que escuchen la voz cada vez más fuerte: todo eso teje una red que hace más difícil rendirse y más sabroso celebrar. Y la red funciona en los dos sentidos: así como recibimos ánimo, también lo damos, y pocas cosas fortalecen tanto como sentirse útil para otro. El que anima a los demás con voz fuerte y palabras generosas se anima, sin darse cuenta, a sí mismo. La superación, como la mesa, se disfruta más acompañada.\n\nConfía en tu voz, en tu cuerpo y en tu mente, porque dentro de ti habita una fuerza capaz de sorprenderte. Hoy, mientras lees estas líneas en voz alta y fuerte, estás haciendo exactamente lo que hacen los que se superan: presentarse, practicar, insistir. Levántate cada mañana, respira hondo y da el siguiente paso, porque el progreso pertenece a quienes se atreven a intentarlo una vez más, con la voz clara y el corazón decidido."},
+  {titulo:"Gota a gota", texto:"La perseverancia es el arte de continuar cuando todo invita a detenerse. El agua, gota a gota, perfora la piedra más dura; no por su fuerza, sino por su constancia. Así también nosotros alcanzamos lo que parecía imposible: con repetición, disciplina y paciencia. Los grandes logros rara vez llegan de golpe; se construyen con pequeños pasos sostenidos en el tiempo.\n\nEn el campo, el agricultor siembra sabiendo que no verá frutos mañana. Riega la tierra día tras día sin impacientarse, porque entiende algo que las ciudades a veces olvidan: los procesos valiosos tienen su tiempo propio. Nadie jala una planta para que crezca más rápido. La cuida, la riega, confía. La voz se cultiva igual: cada repetición es un riego, cada sesión es una semana de sol, y la cosecha llega para quien no abandonó el campo.\n\nLa constancia tiene un aliado poderoso: el hábito. Lo que al principio requiere esfuerzo y memoria, con el tiempo se vuelve tan natural como lavarse los dientes. Los primeros días de cualquier práctica son los más difíciles, porque todo es nuevo y el resultado no se ve. Pero quien resiste esas primeras semanas descubre que después el hábito lo lleva a él, y no al revés. La disciplina bien sembrada se convierte en costumbre, y la costumbre en identidad: ya no soy alguien que intenta practicar; soy alguien que practica.\n\nCuando el avance parece lento, conviene mirar el camino recorrido y no solo la cima. El alpinista que solo mira la cumbre se desanima; el que mira de vez en cuando hacia el valle descubre cuánto ha subido ya. Compara tu voz de hoy con la de tus primeros días, no con una perfección imaginaria. El registro de cada sesión cuenta esa historia: paso a paso, número a número, tu esfuerzo va dejando constancia de que sí hay camino, y de que lo estás recorriendo.\n\nTambién los descansos forman parte de la perseverancia. Descansar no es abandonar: es recargar. El músculo crece en la pausa, la tierra se renueva en barbecho, y la voz también agradece sus momentos de silencio y de agua. Perseverar no significa exigirse sin medida, sino volver siempre, una y otra vez, con la serenidad del que sabe que esto es una carrera larga y que la va ganando quien permanece.\n\nLas catedrales más imponentes se levantaron piedra por piedra, a lo largo de generaciones enteras. Los canteros que colocaban las primeras hiladas sabían que no verían las torres terminadas, y aun así trabajaban con esmero, porque entendían que toda grandeza es una suma de jornadas humildes. Lo mismo cuenta cualquier abuela sobre el tejido: punto por punto se hace la cobija que abriga a toda la familia. Lo mismo dice el mar, que fue llenándose río por río, lluvia por lluvia. La naturaleza entera funciona por acumulación paciente, y nosotros somos parte de ella. Cada repetición de voz, cada lectura como esta, cada día marcado en el calendario de práctica es una piedra bien puesta, un punto bien tejido, una gota que se suma. La obra avanza aunque no siempre se vea desde cerca.\n\nCuando sientas que avanzas despacio, recuerda que incluso el paso más lento te acerca, mientras que rendirse te aleja para siempre. La gota no tiene prisa y sin embargo vence a la piedra. Sigue adelante con calma y determinación, hoy con esta lectura en voz alta y fuerte, mañana con la siguiente, porque la meta no es de quien corre más rápido, sino de quien nunca, nunca deja de caminar."},
+  {titulo:"La actitud lo cambia todo", texto:"La actitud con la que enfrentamos la vida transforma por completo lo que vivimos. No podemos elegir todas las circunstancias, pero siempre podemos elegir cómo responder a ellas. Una sonrisa, una palabra amable o un pensamiento esperanzador tienen el poder de cambiar un día entero. El optimismo no ignora las dificultades: las mira de frente y decide buscar una salida.\n\nDos personas pueden vivir la misma mañana lluviosa. Una ve el cielo gris y decide que el día está arruinado. La otra escucha la lluvia y agradece el fresco, el olor a tierra mojada, la excusa perfecta para un café caliente. La lluvia es la misma; la vida que cada una vive ese día es completamente distinta. Ese es el poder silencioso de la actitud: no cambia el clima, pero cambia por completo al que lo habita.\n\nLa ciencia lo ha estudiado mucho: las personas que practican la gratitud duermen mejor, se enferman menos y se recuperan más rápido. No porque su vida tenga menos problemas, sino porque su atención está entrenada para ver también lo que sí funciona. Cada noche se puede hacer un ejercicio sencillo: nombrar tres cosas buenas del día, aunque sean pequeñas. Un plato sabroso, una llamada cariñosa, un ejercicio completado. La gratitud es una linterna: alumbra lo que ya estaba ahí.\n\nLa actitud también se contagia. Quien saluda con voz fuerte y ánimo alegre cambia el humor de toda la mesa. Quien se queja sin pausa apaga la habitación entera. Todos conocemos a personas cuya sola presencia levanta el día, y la buena noticia es que eso no es un don misterioso: es una decisión repetida. Ser esa persona para los demás está al alcance de cualquiera que lo decida, y trae de regalo serlo también para uno mismo.\n\nHablar con voz fuerte es, en sí mismo, una declaración de actitud. El que habla fuerte dice al mundo: aquí estoy, tengo algo que decir, mi voz vale. Por eso este ejercicio es mucho más que un entrenamiento muscular: es un entrenamiento de presencia. Cada palabra dicha con energía le recuerda al cuerpo y a la mente que no estamos para escondernos, que la vida se vive de frente y en voz alta, participando, opinando, contando historias y diciendo cariños que se escuchen bien.\n\nEl buen humor merece un lugar de honor entre los remedios. Reírse, incluso de uno mismo, afloja lo que la preocupación aprieta. Una carcajada a tiempo relaja los hombros, abre el pecho y hasta mejora la voz, porque la risa es, al fin y al cabo, un ejercicio de aire y sonido hecho con alegría. Las familias que cultivan el chiste, la anécdota repetida mil veces y el apodo cariñoso viven las dificultades con otra ligereza. No se trata de tomar todo a broma, sino de no tomarse tan en serio todo el tiempo. El que puede sonreír de su propio tropiezo ya le quitó la mitad del peso. Buscar cada día una razón para reír, y reír fuerte, sin pena, es también entrenar la voz y entrenar el alma.\n\nCada mañana es una página en blanco esperando ser escrita con valentía y entusiasmo. Cuida tus pensamientos como cuidas un jardín: arranca las hierbas del desánimo y riega las flores de la esperanza. Alimenta tu confianza con cada práctica cumplida y habla siempre con fuerza y claridad, porque quien cree en sí mismo, y lo dice con voz fuerte para que todos lo oigan, ya ha dado el primer paso hacia el éxito."}
 ];
 
 /* ─────────── Transferencia diaria (carryover LSVT: voz fuerte en la vida real) ─────────── */
@@ -115,9 +115,9 @@ function setReps(ex, val){
 function repStepperRow(ex){
   var REPS=exReps(ex);
   var lbl=(ex.type==="phrases")?"Ciclos":"Repeticiones";
-  var bs="width:40px;height:40px;border-radius:11px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);color:#F1F5F9;font-size:23px;font-weight:800;line-height:1;flex-shrink:0;";
-  return el("div",{style:"display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:6px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;"},[
-    el("div",{style:"font-size:11px;letter-spacing:1.5px;color:#64748B;font-weight:700;text-transform:uppercase;"}, lbl),
+  var bs="width:40px;height:40px;border-radius:11px;border:1px solid rgba(26,35,126,0.17);background:rgba(26,35,126,0.09);color:#1a237e;font-size:23px;font-weight:800;line-height:1;flex-shrink:0;";
+  return el("div",{style:"display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:6px;padding:10px;background:rgba(26,35,126,0.03);border:1px solid rgba(26,35,126,0.09);border-radius:14px;"},[
+    el("div",{style:"font-size:11px;letter-spacing:1.5px;color:#5a6899;font-weight:700;text-transform:uppercase;"}, lbl),
     btn("−", bs, function(){ setReps(ex, REPS-1); }),
     el("div",{style:"min-width:32px;text-align:center;font-size:24px;font-weight:900;color:"+ex.color+";"}, String(REPS)),
     btn("+", bs, function(){ setReps(ex, REPS+1); })
@@ -317,10 +317,10 @@ document.addEventListener("visibilitychange", function(){
 
 /* ─────────── Zonas ─────────── */
 function dbZone(db, targetDb){
-  if(db==null || db<52) return {key:"silent",label:"· · · VOCALIZA",color:"#334155",msg:""};
-  if(db<targetDb) return {key:"low",label:"⬇ BAJO",color:"#F59E0B",msg:"¡MÁS FUERTE!"};
-  if(db<=targetDb+15) return {key:"ok",label:"✓ EN RANGO",color:"#10B981",msg:"¡MANTÉN ASÍ!"};
-  return {key:"high",label:"⬆ MUY FUERTE",color:"#A855F7",msg:"potente — sin tensar"};
+  if(db==null || db<52) return {key:"silent",label:"· · · VOCALIZA",color:"#93a0c8",msg:""};
+  if(db<targetDb) return {key:"low",label:"⬇ BAJO",color:"#e65100",msg:"¡MÁS FUERTE!"};
+  if(db<=targetDb+15) return {key:"ok",label:"✓ EN RANGO",color:"#2e7d32",msg:"¡MANTÉN ASÍ!"};
+  return {key:"high",label:"⬆ MUY FUERTE",color:"#6a1b9a",msg:"potente — sin tensar"};
 }
 function pitchStatus(mf, z){
   if(mf==null||!z) return null;
@@ -339,12 +339,12 @@ function inZone(mf, z){
 
 /* ─────────── Calificación (0–100 + etiqueta) ─────────── */
 function scoreLabel(s){
-  if(s==null) return {txt:"—",color:"#475569"};
-  if(s>=85) return {txt:"Excelente",color:"#10B981"};
-  if(s>=70) return {txt:"Muy bien",color:"#22C55E"};
-  if(s>=50) return {txt:"Bien",color:"#F59E0B"};
-  if(s>=30) return {txt:"Sigue practicando",color:"#F97316"};
-  return {txt:"A mejorar",color:"#EF4444"};
+  if(s==null) return {txt:"—",color:"#5a6899"};
+  if(s>=85) return {txt:"Excelente",color:"#2e7d32"};
+  if(s>=70) return {txt:"Muy bien",color:"#43a047"};
+  if(s>=50) return {txt:"Bien",color:"#e65100"};
+  if(s>=30) return {txt:"Sigue practicando",color:"#d84315"};
+  return {txt:"A mejorar",color:"#c62828"};
 }
 // Puntajes de un ejercicio a partir de sus stats
 function exerciseScores(ex, stats){
@@ -373,8 +373,8 @@ function currentSessionExercises(){
 function scoreDimRow(label, val){
   var lab=scoreLabel(val);
   var row=el("div",{style:"display:flex;align-items:center;gap:10px;margin-bottom:9px;"});
-  row.appendChild(el("div",{style:"width:80px;text-align:left;font-size:12px;color:#94A3B8;font-weight:700;"},label));
-  var barBg=el("div",{style:"flex:1;height:9px;background:#0F1829;border-radius:99px;overflow:hidden;"});
+  row.appendChild(el("div",{style:"width:80px;text-align:left;font-size:12px;color:#5a6899;font-weight:700;"},label));
+  var barBg=el("div",{style:"flex:1;height:9px;background:#dde3f3;border-radius:99px;overflow:hidden;"});
   barBg.appendChild(el("div",{style:"height:100%;width:"+(val!=null?val:0)+"%;background:"+lab.color+";border-radius:99px;transition:width .5s ease;"}));
   row.appendChild(barBg);
   row.appendChild(el("div",{style:"width:52px;text-align:right;"},[
@@ -405,9 +405,9 @@ function btn(txt, style, onClick){
 }
 
 var BIG_BTN="border:none;border-radius:18px;padding:20px;font-size:19px;font-weight:800;color:#fff;width:100%;letter-spacing:0.5px;";
-var BACK_BTN="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:11px;padding:8px 15px;color:#94A3B8;font-size:24px;line-height:1;flex-shrink:0;";
-var STAT_BOX="flex:1;background:#0D1525;border-radius:14px;padding:10px 8px;text-align:center;";
-var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#475569;text-transform:uppercase;margin-bottom:4px;";
+var BACK_BTN="background:rgba(26,35,126,0.07);border:1px solid rgba(26,35,126,0.11);border-radius:11px;padding:8px 15px;color:#5a6899;font-size:24px;line-height:1;flex-shrink:0;";
+var STAT_BOX="flex:1;background:#ffffff;border-radius:14px;padding:10px 8px;text-align:center;";
+var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#5a6899;text-transform:uppercase;margin-bottom:4px;";
 
 /* ─────────── Navegación ─────────── */
 function go(screen){ if(screen==="home"||screen==="history"){ if(state.micOn) stopMic(); } state.screen=screen; render(); }
@@ -471,24 +471,24 @@ function startPhraseGap(){
   render();
 }
 function gapOverlay(){
-  var ov=el("div",{style:"position:fixed;inset:0;z-index:55;background:rgba(6,11,24,0.92);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
+  var ov=el("div",{style:"position:fixed;inset:0;z-index:55;background:rgba(238,241,250,0.95);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
   ov.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;",class:"card"},"👏"));
-  ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:4px;color:#F59E0B;text-transform:uppercase;margin-bottom:8px;font-weight:800;"},"Cambia de frase"));
-  var n=el("div",{style:"font-size:76px;font-weight:900;letter-spacing:-2px;color:#F59E0B;line-height:1;margin:6px 0 12px;"},String(state.gap||3));
+  ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:4px;color:#e65100;text-transform:uppercase;margin-bottom:8px;font-weight:800;"},"Cambia de frase"));
+  var n=el("div",{style:"font-size:76px;font-weight:900;letter-spacing:-2px;color:#e65100;line-height:1;margin:6px 0 12px;"},String(state.gap||3));
   _gapNode=n; ov.appendChild(n);
-  ov.appendChild(el("div",{style:"font-size:14px;color:#64748B;line-height:1.6;"},"Respira. La siguiente frase empieza sola."));
+  ov.appendChild(el("div",{style:"font-size:14px;color:#5a6899;line-height:1.6;"},"Respira. La siguiente frase empieza sola."));
   return ov;
 }
 function pauseOverlay(){
-  var ov=el("div",{style:"position:fixed;inset:0;z-index:60;background:rgba(6,11,24,0.94);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
+  var ov=el("div",{style:"position:fixed;inset:0;z-index:60;background:rgba(238,241,250,0.96);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
   ov.appendChild(el("div",{style:"font-size:80px;line-height:1;margin-bottom:14px;",class:"card"},"💧"));
-  ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:5px;color:#3B82F6;text-transform:uppercase;margin-bottom:10px;font-weight:800;"},"En pausa"));
-  ov.appendChild(el("div",{style:"font-size:30px;font-weight:900;color:#F8FAFC;margin-bottom:8px;"},"Toma agua"));
-  ov.appendChild(el("div",{style:"font-size:14px;color:#64748B;margin-bottom:20px;line-height:1.6;"},"Descansa e hidrátate. Reanuda cuando estés listo."));
-  var t=el("div",{style:"font-size:46px;font-weight:900;letter-spacing:-2px;color:#3B82F6;margin-bottom:28px;"},fmtTime(state.restSec||0));
+  ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:5px;color:#0d47a1;text-transform:uppercase;margin-bottom:10px;font-weight:800;"},"En pausa"));
+  ov.appendChild(el("div",{style:"font-size:30px;font-weight:900;color:#1a237e;margin-bottom:8px;"},"Toma agua"));
+  ov.appendChild(el("div",{style:"font-size:14px;color:#5a6899;margin-bottom:20px;line-height:1.6;"},"Descansa e hidrátate. Reanuda cuando estés listo."));
+  var t=el("div",{style:"font-size:46px;font-weight:900;letter-spacing:-2px;color:#0d47a1;margin-bottom:28px;"},fmtTime(state.restSec||0));
   _pauseNode=t; ov.appendChild(t);
   ov.appendChild(btn([el("span",{style:"font-size:20px;"},"▶  "),"REANUDAR"],
-    "border:none;border-radius:16px;padding:18px 44px;font-size:18px;font-weight:900;color:#fff;background:#10B981;letter-spacing:0.5px;", resumeSession));
+    "border:none;border-radius:16px;padding:18px 44px;font-size:18px;font-weight:900;color:#fff;background:#2e7d32;letter-spacing:0.5px;", resumeSession));
   return ov;
 }
 
@@ -583,23 +583,23 @@ function HomeScreen(){
   var doneCount=Object.keys(state.done).length;
 
   var head=el("div",{style:"padding:48px 24px 16px;text-align:center;"});
-  head.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#475569;text-transform:uppercase;margin-bottom:8px;"},"Terapia de Voz"));
-  head.appendChild(el("div",{style:"font-size:42px;font-weight:900;letter-spacing:-2px;color:#F8FAFC;line-height:1;"},"LSVT LOUD"));
-  head.appendChild(el("div",{style:"margin-top:10px;font-size:15px;color:#3B82F6;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
-  head.appendChild(el("div",{style:"margin-top:5px;font-size:9px;color:#334155;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
+  head.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#5a6899;text-transform:uppercase;margin-bottom:8px;"},"Terapia de Voz"));
+  head.appendChild(el("div",{style:"font-size:42px;font-weight:900;letter-spacing:-2px;color:#1a237e;line-height:1;"},"LSVT LOUD"));
+  head.appendChild(el("div",{style:"margin-top:10px;font-size:15px;color:#0d47a1;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
+  head.appendChild(el("div",{style:"margin-top:5px;font-size:9px;color:#93a0c8;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
   if(streak>0){
-    head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:99px;padding:6px 16px;font-size:13px;font-weight:800;color:#F59E0B;"},"🔥 "+streak+(streak===1?" día":" días")+" seguidos"));
+    head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:rgba(230,81,0,0.1);border:1px solid rgba(230,81,0,0.35);border-radius:99px;padding:6px 16px;font-size:13px;font-weight:800;color:#e65100;"},"🔥 "+streak+(streak===1?" día":" días")+" seguidos"));
   }
-  var barBg=el("div",{style:"margin-top:18px;background:#0F1829;border-radius:99px;height:5px;overflow:hidden;"});
-  barBg.appendChild(el("div",{style:"height:100%;width:"+(doneCount/EXERCISES.length*100)+"%;background:linear-gradient(90deg,#3B82F6,#A855F7,#10B981);border-radius:99px;transition:width 0.6s ease;"}));
+  var barBg=el("div",{style:"margin-top:18px;background:#dde3f3;border-radius:99px;height:5px;overflow:hidden;"});
+  barBg.appendChild(el("div",{style:"height:100%;width:"+(doneCount/EXERCISES.length*100)+"%;background:linear-gradient(90deg,#0d47a1,#6a1b9a,#2e7d32);border-radius:99px;transition:width 0.6s ease;"}));
   head.appendChild(barBg);
-  head.appendChild(el("div",{style:"margin-top:7px;font-size:12px;color:#475569;"},doneCount+" / "+EXERCISES.length+" ejercicios completados hoy"));
+  head.appendChild(el("div",{style:"margin-top:7px;font-size:12px;color:#5a6899;"},doneCount+" / "+EXERCISES.length+" ejercicios completados hoy"));
   wrap.appendChild(head);
 
   var nav=el("div",{style:"display:flex;gap:10px;padding:0 16px 12px;"});
-  var navCard="flex:1;background:#0D1525;border-radius:16px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;";
-  var b1=btn([el("div",{style:"font-size:26px;"},"🎹"),el("div",{style:"font-size:14px;font-weight:800;color:#F1F5F9;"},"Medidor"),el("div",{style:"font-size:10.5px;color:#64748B;"},"dB + tono + piano")], navCard+"border:1.5px solid rgba(168,85,247,0.35);", function(){go("tuner");});
-  var b2=btn([el("div",{style:"font-size:26px;"},"📊"),el("div",{style:"font-size:14px;font-weight:800;color:#F1F5F9;"},"Historial"),el("div",{style:"font-size:10.5px;color:#64748B;"},state.log.length+(state.log.length===1?" sesión":" sesiones"))], navCard+"border:1.5px solid rgba(59,130,246,0.35);", function(){go("history");});
+  var navCard="flex:1;background:#ffffff;border-radius:16px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;";
+  var b1=btn([el("div",{style:"font-size:26px;"},"🎹"),el("div",{style:"font-size:14px;font-weight:800;color:#1a237e;"},"Medidor"),el("div",{style:"font-size:10.5px;color:#5a6899;"},"dB + tono + piano")], navCard+"border:1.5px solid rgba(106,27,154,0.35);", function(){go("tuner");});
+  var b2=btn([el("div",{style:"font-size:26px;"},"📊"),el("div",{style:"font-size:14px;font-weight:800;color:#1a237e;"},"Historial"),el("div",{style:"font-size:10.5px;color:#5a6899;"},state.log.length+(state.log.length===1?" sesión":" sesiones"))], navCard+"border:1.5px solid rgba(13,71,161,0.35);", function(){go("history");});
   nav.appendChild(b1); nav.appendChild(b2);
   wrap.appendChild(nav);
 
@@ -608,10 +608,10 @@ function HomeScreen(){
   var carryDone=state.settings.carryDone===todayKey;
   var carryWrap=el("div",{style:"padding:0 16px 12px;"});
   carryWrap.appendChild(btn([
-    el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(carryDone?"#10B981":"#F59E0B")+";text-transform:uppercase;font-weight:800;margin-bottom:5px;text-align:left;"},(carryDone?"✓ HECHA · ":"🎯 ")+"TAREA DE HOY · VOZ FUERTE EN LA VIDA REAL"),
-    el("div",{style:"font-size:14px;color:"+(carryDone?"#475569":"#E2E8F0")+";line-height:1.55;text-align:left;font-weight:600;"+(carryDone?"text-decoration:line-through;":"")},todayCarryover()),
-    el("div",{style:"font-size:10.5px;color:#475569;margin-top:6px;text-align:left;"},carryDone?"¡Muy bien! Mañana habrá una nueva.":"Tócala cuando la hayas hecho")
-  ],"width:100%;background:"+(carryDone?"rgba(16,185,129,0.06)":"rgba(245,158,11,0.07)")+";border:1.5px solid "+(carryDone?"rgba(16,185,129,0.3)":"rgba(245,158,11,0.35)")+";border-radius:16px;padding:13px 16px;color:#F1F5F9;", function(){
+    el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(carryDone?"#2e7d32":"#e65100")+";text-transform:uppercase;font-weight:800;margin-bottom:5px;text-align:left;"},(carryDone?"✓ HECHA · ":"🎯 ")+"TAREA DE HOY · VOZ FUERTE EN LA VIDA REAL"),
+    el("div",{style:"font-size:14px;color:"+(carryDone?"#5a6899":"#1a237e")+";line-height:1.55;text-align:left;font-weight:600;"+(carryDone?"text-decoration:line-through;":"")},todayCarryover()),
+    el("div",{style:"font-size:10.5px;color:#5a6899;margin-top:6px;text-align:left;"},carryDone?"¡Muy bien! Mañana habrá una nueva.":"Tócala cuando la hayas hecho")
+  ],"width:100%;background:"+(carryDone?"rgba(46,125,50,0.06)":"rgba(230,81,0,0.07)")+";border:1.5px solid "+(carryDone?"rgba(46,125,50,0.3)":"rgba(230,81,0,0.35)")+";border-radius:16px;padding:13px 16px;color:#1a237e;", function(){
     state.settings.carryDone = carryDone ? "" : todayKey;
     saveSettings(state.settings); render();
   }));
@@ -625,25 +625,25 @@ function HomeScreen(){
     var rightEl=(sc && sc.overall!=null)
       ? el("div",{style:"flex-shrink:0;text-align:center;min-width:30px;"},[
           el("div",{style:"font-size:20px;font-weight:900;line-height:1;color:"+scoreLabel(sc.overall).color+";"},String(sc.overall)),
-          el("div",{style:"font-size:8px;color:#475569;letter-spacing:0.5px;"},"pts")
+          el("div",{style:"font-size:8px;color:#5a6899;letter-spacing:0.5px;"},"pts")
         ])
-      : el("div",{style:"font-size:20px;color:#1E293B;"},"›");
+      : el("div",{style:"font-size:20px;color:#c7cee6;"},"›");
     var row=btn([
-      el("div",{style:"width:46px;height:46px;border-radius:50%;flex-shrink:0;background:"+(isDone?e.color:"rgba(255,255,255,0.04)")+";border:"+(isDone?"none":"1.5px solid rgba(255,255,255,0.1)")+";display:flex;align-items:center;justify-content:center;font-size:"+(isDone?21:19)+"px;color:"+(isDone?"#fff":"#64748B")+";font-weight:700;"}, isDone?"✓":e.emoji),
+      el("div",{style:"width:46px;height:46px;border-radius:50%;flex-shrink:0;background:"+(isDone?e.color:"rgba(26,35,126,0.05)")+";border:"+(isDone?"none":"1.5px solid rgba(26,35,126,0.13)")+";display:flex;align-items:center;justify-content:center;font-size:"+(isDone?21:19)+"px;color:"+(isDone?"#fff":"#5a6899")+";font-weight:700;"}, isDone?"✓":e.emoji),
       el("div",{style:"flex:1;min-width:0;"},[
-        el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(isDone?e.color:"#475569")+";text-transform:uppercase;margin-bottom:2px;"},e.label),
+        el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(isDone?e.color:"#5a6899")+";text-transform:uppercase;margin-bottom:2px;"},e.label),
         el("div",{style:"font-size:18px;font-weight:800;line-height:1.1;"},e.name),
-        el("div",{style:"font-size:12px;color:#475569;margin-top:3px;"}, e.type==="sustain"?(exReps(e)+" reps · meta "+e.target+"s"):e.type==="phrases"?(exReps(e)+" ciclos · "+exTotal(e)+" frases"):"1 párrafo")
+        el("div",{style:"font-size:12px;color:#5a6899;margin-top:3px;"}, e.type==="sustain"?(exReps(e)+" reps · meta "+e.target+"s"):e.type==="phrases"?(exReps(e)+" ciclos · "+exTotal(e)+" frases"):"1 párrafo")
       ]),
       rightEl
-    ], "display:flex;align-items:center;gap:14px;background:"+(isDone?e.color+"10":"#0D1525")+";border:1.5px solid "+(isDone?e.color+"55":"rgba(255,255,255,0.06)")+";border-radius:18px;padding:14px 16px;color:#F1F5F9;width:100%;text-align:left;", function(){ openEx(i); });
+    ], "display:flex;align-items:center;gap:14px;background:"+(isDone?e.color+"10":"#ffffff")+";border:1.5px solid "+(isDone?e.color+"55":"rgba(26,35,126,0.09)")+";border-radius:18px;padding:14px 16px;color:#1a237e;width:100%;text-align:left;", function(){ openEx(i); });
     row.className="card"; row.style.animationDelay=(i*0.05)+"s";
     list.appendChild(row);
   });
   wrap.appendChild(list);
 
   var foot=el("div",{style:"text-align:center;padding:20px 24px 48px;"});
-  foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 24px;color:#475569;font-size:13px;", newSession));
+  foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(26,35,126,0.11);border-radius:10px;padding:10px 24px;color:#5a6899;font-size:13px;", newSession));
   wrap.appendChild(foot);
   return wrap;
 }
@@ -658,7 +658,7 @@ function thermometerSVG(db, targetDb, micOn, running){
   var fill = (db!=null&&db>=45)?pct(db):0;
   var svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="opacity:'+(micOn?1:0.4)+';transition:opacity .3s;">';
   // tube bg
-  svg+='<rect x="'+tx0+'" y="'+ty0+'" width="'+TW+'" height="'+(ty1-ty0)+'" rx="'+r+'" fill="#0A1020" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>';
+  svg+='<rect x="'+tx0+'" y="'+ty0+'" width="'+TW+'" height="'+(ty1-ty0)+'" rx="'+r+'" fill="#e8eaf6" stroke="rgba(26,35,126,0.2)" stroke-width="1.5"/>';
   // zone bands
   function bandRect(p0,p1,color,op){
     var yy=y(p1), hh=y(p0)-y(p1);
@@ -667,9 +667,9 @@ function thermometerSVG(db, targetDb, micOn, running){
   var t=pct(targetDb);
   svg+='<clipPath id="tube"><rect x="'+(tx0+2)+'" y="'+(ty0+2)+'" width="'+(TW-4)+'" height="'+(ty1-ty0-4)+'" rx="'+(r-2)+'"/></clipPath>';
   svg+='<g clip-path="url(#tube)">';
-  svg+=bandRect(0,t,"#F59E0B",0.16);
-  svg+=bandRect(t,pct(targetDb+15),"#10B981",0.20);
-  svg+=bandRect(pct(targetDb+15),1,"#A855F7",0.16);
+  svg+=bandRect(0,t,"#e65100",0.16);
+  svg+=bandRect(t,pct(targetDb+15),"#2e7d32",0.20);
+  svg+=bandRect(pct(targetDb+15),1,"#6a1b9a",0.16);
   // fill
   if(fill>0){
     svg+='<rect x="'+(tx0+2)+'" y="'+y(fill)+'" width="'+(TW-4)+'" height="'+(y(0)-y(fill))+'" fill="'+zone.color+'" opacity="0.85"/>';
@@ -677,10 +677,10 @@ function thermometerSVG(db, targetDb, micOn, running){
   }
   svg+='</g>';
   // meta dashed line
-  svg+='<line x1="'+(tx0-6)+'" y1="'+y(t)+'" x2="'+(tx1+6)+'" y2="'+y(t)+'" stroke="#F8FAFC" stroke-width="2.5" stroke-dasharray="5 4" opacity="0.85"/>';
+  svg+='<line x1="'+(tx0-6)+'" y1="'+y(t)+'" x2="'+(tx1+6)+'" y2="'+y(t)+'" stroke="#1a237e" stroke-width="2.5" stroke-dasharray="5 4" opacity="0.85"/>';
   // ticks
   [60,80,100].forEach(function(gv){
-    svg+='<text x="'+(tx1-2)+'" y="'+(y(pct(gv))+3)+'" font-size="8.5" font-weight="800" fill="rgba(255,255,255,0.4)" text-anchor="end">'+gv+'</text>';
+    svg+='<text x="'+(tx1-2)+'" y="'+(y(pct(gv))+3)+'" font-size="8.5" font-weight="800" fill="rgba(26,35,126,0.55)" text-anchor="end">'+gv+'</text>';
   });
   svg+='</svg>';
   return svg;
@@ -696,12 +696,12 @@ function liveGraphSVG(history, targetDb, ex){
   var last=history.length?history[history.length-1]:null;
   var okTop=dbY(targetDb+15), okBot=dbY(targetDb);
   var svg='<svg width="100%" height="'+HDB+'" viewBox="0 0 '+W+' '+HDB+'" preserveAspectRatio="none" style="display:block;">';
-  svg+='<rect x="0" y="'+okTop+'" width="'+W+'" height="'+Math.max(0,okBot-okTop)+'" fill="rgba(16,185,129,0.14)"/>';
-  svg+='<line x1="0" x2="'+W+'" y1="'+okBot+'" y2="'+okBot+'" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5 4"/>';
-  [60,80,100].forEach(function(g){ svg+='<line x1="0" x2="'+W+'" y1="'+dbY(g)+'" y2="'+dbY(g)+'" stroke="rgba(255,255,255,0.05)"/><text x="3" y="'+(dbY(g)-2.5)+'" font-size="8" fill="#334155" font-weight="700">'+g+'</text>'; });
+  svg+='<rect x="0" y="'+okTop+'" width="'+W+'" height="'+Math.max(0,okBot-okTop)+'" fill="rgba(46,125,50,0.14)"/>';
+  svg+='<line x1="0" x2="'+W+'" y1="'+okBot+'" y2="'+okBot+'" stroke="#e65100" stroke-width="1.5" stroke-dasharray="5 4"/>';
+  [60,80,100].forEach(function(g){ svg+='<line x1="0" x2="'+W+'" y1="'+dbY(g)+'" y2="'+dbY(g)+'" stroke="rgba(26,35,126,0.07)"/><text x="3" y="'+(dbY(g)-2.5)+'" font-size="8" fill="#93a0c8" font-weight="700">'+g+'</text>'; });
   if(history.length>1){
     var pts=history.map(function(h,i){ return X(i).toFixed(1)+","+dbY(h.db).toFixed(1); }).join(" ");
-    svg+='<polyline points="'+pts+'" fill="none" stroke="#F8FAFC" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    svg+='<polyline points="'+pts+'" fill="none" stroke="#1a237e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
   }
   if(last){ var z=dbZone(last.db,targetDb); svg+='<circle cx="'+X(history.length-1)+'" cy="'+dbY(last.db)+'" r="4.5" fill="'+z.color+'"/>'; }
   svg+='</svg>';
@@ -716,14 +716,14 @@ function liveGraphSVG(history, targetDb, ex){
   var seg=[], cur=[];
   history.forEach(function(h,i){ if(h.mf!=null) cur.push(X(i).toFixed(1)+","+pY(h.mf).toFixed(1)); else { if(cur.length>1) seg.push(cur.join(" ")); cur=[]; } });
   if(cur.length>1) seg.push(cur.join(" "));
-  seg.forEach(function(sp){ svg2+='<polyline points="'+sp+'" fill="none" stroke="#C4B5FD" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
-  if(last&&last.mf!=null) svg2+='<circle cx="'+X(history.length-1)+'" cy="'+pY(last.mf)+'" r="3.8" fill="#A855F7"/>';
+  seg.forEach(function(sp){ svg2+='<polyline points="'+sp+'" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
+  if(last&&last.mf!=null) svg2+='<circle cx="'+X(history.length-1)+'" cy="'+pY(last.mf)+'" r="3.8" fill="#6a1b9a"/>';
   svg2+='</svg>';
 
-  var box=el("div",{style:"background:#0A1020;border-radius:16px;border:1px solid rgba(255,255,255,0.06);padding:10px 10px 8px;width:100%;"});
-  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#475569;font-weight:700;padding:0 2px 4px;"},[el("span",null,"🔊 VOLUMEN (dB)"),el("span",{style:"color:#10B981;"},"■ rango "+targetDb+"–"+(targetDb+15))]));
+  var box=el("div",{style:"background:#ffffff;border-radius:16px;border:1px solid rgba(26,35,126,0.12);padding:10px 10px 8px;width:100%;"});
+  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:0 2px 4px;"},[el("span",null,"🔊 VOLUMEN (dB)"),el("span",{style:"color:#2e7d32;"},"■ rango "+targetDb+"–"+(targetDb+15))]));
   box.appendChild(el("div",{html:svg}));
-  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#475569;font-weight:700;padding:8px 2px 4px;border-top:1px solid rgba(255,255,255,0.05);margin-top:6px;"},[el("span",null,"♪ TONO"),el("span",{style:"color:"+ex.color+";"},"■ "+ex.zone.label)]));
+  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:8px 2px 4px;border-top:1px solid rgba(26,35,126,0.07);margin-top:6px;"},[el("span",null,"♪ TONO"),el("span",{style:"color:"+ex.color+";"},"■ "+ex.zone.label)]));
   box.appendChild(el("div",{html:svg2}));
   return box;
 }
@@ -739,29 +739,29 @@ function SustainScreen(){
   header.appendChild(btn("‹",BACK_BTN,goHome));
   header.appendChild(el("div",{style:"flex:1;"},[
     el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},ex.name),
-    el("div",{style:"font-size:14px;color:#475569;"},"Repetición "+(state.rep+1)+" de "+exReps(ex))
+    el("div",{style:"font-size:14px;color:#5a6899;"},"Repetición "+(state.rep+1)+" de "+exReps(ex))
   ]));
   var pauseBtn=btn([el("span",{style:"font-size:15px;"},"⏸"),el("span",{style:"font-size:13px;font-weight:800;margin-left:4px;"},"💧")],
-    "background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.55);border-radius:12px;padding:8px 11px;color:#3B82F6;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;",
+    "background:rgba(13,71,161,0.12);border:1.5px solid rgba(13,71,161,0.55);border-radius:12px;padding:8px 11px;color:#0d47a1;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;",
     pauseSession);
   header.appendChild(pauseBtn);
   var micBtn=btn(state.micOn?"🎤 ON":"🎤 Medir",
-    "background:"+(state.micOn?"rgba(16,185,129,0.12)":"rgba(168,85,247,0.12)")+";border:1.5px solid "+(state.micOn?"#10B981":"#A855F7")+";border-radius:12px;padding:8px 12px;color:"+(state.micOn?"#10B981":"#A855F7")+";font-size:12.5px;font-weight:800;flex-shrink:0;",
+    "background:"+(state.micOn?"rgba(46,125,50,0.12)":"rgba(106,27,154,0.12)")+";border:1.5px solid "+(state.micOn?"#2e7d32":"#6a1b9a")+";border-radius:12px;padding:8px 12px;color:"+(state.micOn?"#2e7d32":"#6a1b9a")+";font-size:12.5px;font-weight:800;flex-shrink:0;",
     function(){ if(state.micOn) stopMic(); else startMic(function(){}); });
   header.appendChild(micBtn);
   wrap.appendChild(header);
 
   if(state.micError){
-    var errBox=el("div",{style:"margin:4px 16px 6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#FBBF24;line-height:1.6;"});
+    var errBox=el("div",{style:"margin:4px 16px 6px;background:rgba(230,81,0,0.08);border:1px solid rgba(230,81,0,0.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#e65100;line-height:1.6;"});
     errBox.appendChild(el("div",{html:"⚠️ "+state.micError+" El cronómetro funciona sin micrófono."}));
-    errBox.appendChild(btn("🔄 Reintentar","display:block;margin-top:8px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.5);border-radius:8px;padding:7px 14px;color:#FBBF24;font-weight:800;font-size:12px;",function(){ startMic(function(){}); }));
+    errBox.appendChild(btn("🔄 Reintentar","display:block;margin-top:8px;background:rgba(230,81,0,0.15);border:1px solid rgba(230,81,0,0.5);border-radius:8px;padding:7px 14px;color:#e65100;font-weight:800;font-size:12px;",function(){ startMic(function(){}); }));
     wrap.appendChild(errBox);
   }
 
   // dots
   var dots=el("div",{style:"display:flex;justify-content:center;align-items:center;gap:5px;padding:2px 20px 0;flex-wrap:wrap;"});
   for(var i=0;i<exReps(ex);i++){
-    dots.appendChild(el("div",{style:"border-radius:50%;background:"+(i<state.rep?ex.color:i===state.rep?"#F8FAFC":"rgba(255,255,255,0.1)")+";width:"+(i===state.rep?13:8)+"px;height:"+(i===state.rep?13:8)+"px;"}));
+    dots.appendChild(el("div",{style:"border-radius:50%;background:"+(i<state.rep?ex.color:i===state.rep?"#1a237e":"rgba(26,35,126,0.13)")+";width:"+(i===state.rep?13:8)+"px;height:"+(i===state.rep?13:8)+"px;"}));
   }
   wrap.appendChild(dots);
 
@@ -795,17 +795,17 @@ function SustainScreen(){
 
   // mic off prompts
   if(!state.micOn && !state.micError){
-    var actBtn=btn([el("div",null,"🎤 ACTIVAR TERMÓMETRO DE VOLUMEN"),el("div",{style:"font-size:10.5px;font-weight:600;color:#64748B;margin-top:3px;"},"(también se activa solo al tocar ▶ INICIAR)")],
-      "margin-top:10px;width:100%;background:rgba(168,85,247,0.12);border:1.5px solid #A855F7;border-radius:14px;padding:13px;color:#C4B5FD;font-size:14px;font-weight:800;", function(){ startMic(function(){}); });
+    var actBtn=btn([el("div",null,"🎤 ACTIVAR TERMÓMETRO DE VOLUMEN"),el("div",{style:"font-size:10.5px;font-weight:600;color:#5a6899;margin-top:3px;"},"(también se activa solo al tocar ▶ INICIAR)")],
+      "margin-top:10px;width:100%;background:rgba(106,27,154,0.12);border:1.5px solid #6a1b9a;border-radius:14px;padding:13px;color:#6a1b9a;font-size:14px;font-weight:800;", function(){ startMic(function(){}); });
     body.appendChild(actBtn);
-    body.appendChild(el("div",{style:"margin-top:10px;font-size:12px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
+    body.appendChild(el("div",{style:"margin-top:10px;font-size:12px;color:#5a6899;text-align:center;line-height:1.7;"},ex.instruction));
   }
 
   // live graph
   if(state.micOn){
     var gWrap=el("div",{id:"graphWrap",style:"margin-top:10px;"});
     gWrap.appendChild(liveGraphSVG(state.history, state.settings.targetDb, ex));
-    gWrap.appendChild(el("div",{style:"font-size:10.5px;color:#334155;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
+    gWrap.appendChild(el("div",{style:"font-size:10.5px;color:#93a0c8;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
     body.appendChild(gWrap);
     _liveNodes.graph=gWrap;
   }
@@ -813,7 +813,7 @@ function SustainScreen(){
   // piano SIEMPRE visible; resalta tu nota cuando el micrófono está activo
   var am=(state.reading&&state.reading.midi!=null)?state.reading.midi:null;
   var pWrap=el("div",{style:"margin-top:12px;"});
-  pWrap.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#475569;font-weight:700;padding:0 2px 2px;"},[el("span",null,"🎹 TU TONO EN EL PIANO"),el("span",{style:"color:#A855F7;"},state.micOn?"tu nota se resalta":"toca para escuchar")]));
+  pWrap.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:0 2px 2px;"},[el("span",null,"🎹 TU TONO EN EL PIANO"),el("span",{style:"color:#6a1b9a;"},state.micOn?"tu nota se resalta":"toca para escuchar")]));
   var pno=buildPiano(am, 104);
   pWrap.appendChild(pno.node);
   body.appendChild(pWrap);
@@ -826,14 +826,14 @@ function SustainScreen(){
     if(state.repLog.length>0){
       var avg=Math.round(state.repLog.reduce(function(a,b){return a+b;},0)/state.repLog.length);
       var best=Math.max.apply(null,state.repLog);
-      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"PROM"),el("div",{style:"font-size:22px;font-weight:900;color:#F8FAFC;"},avg+"s")]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"PROM"),el("div",{style:"font-size:22px;font-weight:900;color:#1a237e;"},avg+"s")]));
       stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"MEJOR"),el("div",{style:"font-size:22px;font-weight:900;color:"+ex.color+";"},best+"s")]));
     }
     if(dbSoFar.length){
       var maxDb=Math.max.apply(null,dbSoFar.map(function(d){return d.maxDb;}));
       var pct=Math.round(dbSoFar.reduce(function(a,d){return a+(d.pctOnTarget||0);},0)/dbSoFar.length);
-      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"dB MÁX"),el("div",{style:"font-size:22px;font-weight:900;color:#10B981;"},String(maxDb))]));
-      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"% RANGO"),el("div",{style:"font-size:22px;font-weight:900;color:"+(pct>=50?"#10B981":"#F59E0B")+";"},pct+"%")]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"dB MÁX"),el("div",{style:"font-size:22px;font-weight:900;color:#2e7d32;"},String(maxDb))]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"% RANGO"),el("div",{style:"font-size:22px;font-weight:900;color:"+(pct>=50?"#2e7d32":"#e65100")+";"},pct+"%")]));
     }
     body.appendChild(stats);
   }
@@ -845,7 +845,7 @@ function SustainScreen(){
     foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  SIGUIENTE REP", BIG_BTN+"background:"+ex.color+";", tickStart));
   } else {
     var hit=state.sec>=ex.target;
-    foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:"+(hit?"#10B981":"#141E30")+";border:2px solid "+(hit?"#10B981":"rgba(255,255,255,0.08)")+";", repDone));
+    foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:"+(hit?"#2e7d32":"#5a6899")+";border:2px solid "+(hit?"#2e7d32":"rgba(26,35,126,0.11)")+";", repDone));
   }
   wrap.appendChild(foot);
   if(state.paused) wrap.appendChild(pauseOverlay());
@@ -864,27 +864,27 @@ function updateLiveDOM(){
   var zone=dbZone(r?r.db:null, td);
   _liveNodes.thermo.innerHTML=thermometerSVG(r?r.db:null, td, state.micOn, state.running);
   _liveNodes.dbRow.innerHTML="";
-  _liveNodes.dbRow.appendChild(el("div",{style:"font-size:58px;font-weight:900;line-height:1;letter-spacing:-3px;color:"+((state.micOn&&zone.key!=="silent")?zone.color:"#1E293B")+";"}, (state.micOn&&r&&r.db>=45)?String(r.db):"——"));
-  _liveNodes.dbRow.appendChild(el("div",{style:"font-size:13px;color:#64748B;font-weight:800;"},"dB"));
+  _liveNodes.dbRow.appendChild(el("div",{style:"font-size:58px;font-weight:900;line-height:1;letter-spacing:-3px;color:"+((state.micOn&&zone.key!=="silent")?zone.color:"#c7cee6")+";"}, (state.micOn&&r&&r.db>=45)?String(r.db):"——"));
+  _liveNodes.dbRow.appendChild(el("div",{style:"font-size:13px;color:#5a6899;font-weight:800;"},"dB"));
   _liveNodes.zoneLine.textContent=state.micOn?(zone.label+(zone.msg?" · "+zone.msg:"")):"🎤 apagado";
-  _liveNodes.zoneLine.style.color=state.micOn?zone.color:"#334155";
+  _liveNodes.zoneLine.style.color=state.micOn?zone.color:"#93a0c8";
   _liveNodes.zoneLine.style.animation=(state.micOn&&state.running&&zone.key==="low")?"blink 1s ease infinite":"none";
   if(_liveNodes.noteLine){
     var pStat=r?pitchStatus(r.mf,ex.zone):null;
     _liveNodes.noteLine.innerHTML="";
-    _liveNodes.noteLine.appendChild(el("span",{style:"color:"+((r&&r.midi!=null)?"#C4B5FD":"#1E293B")+";"}, (r&&r.midi!=null)?("♪ "+midiName(r.midi)):"♪ ——"));
-    if(pStat) _liveNodes.noteLine.appendChild(el("span",{style:"font-size:11px;font-weight:800;margin-left:7px;color:"+(pStat.ok?"#10B981":"#F59E0B")+";"},pStat.txt));
+    _liveNodes.noteLine.appendChild(el("span",{style:"color:"+((r&&r.midi!=null)?"#6a1b9a":"#c7cee6")+";"}, (r&&r.midi!=null)?("♪ "+midiName(r.midi)):"♪ ——"));
+    if(pStat) _liveNodes.noteLine.appendChild(el("span",{style:"font-size:11px;font-weight:800;margin-left:7px;color:"+(pStat.ok?"#2e7d32":"#e65100")+";"},pStat.txt));
   }
   var hasTarget=ex.target!=null;
   var hit=hasTarget && state.sec>=ex.target;
   _liveNodes.timerEl.textContent=fmtTime(state.sec);
-  _liveNodes.timerEl.style.color=hit?"#10B981":state.running?"#F8FAFC":"#1E293B";
+  _liveNodes.timerEl.style.color=hit?"#2e7d32":state.running?"#1a237e":"#c7cee6";
   _liveNodes.metaLine.textContent=hasTarget?(hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+td+" dB")):("OBJETIVO: "+td+" dB · mide tu volumen");
-  _liveNodes.metaLine.style.color=hit?"#10B981":"#334155";
+  _liveNodes.metaLine.style.color=hit?"#2e7d32":"#93a0c8";
   if(_liveNodes.graph && state.micOn){
     _liveNodes.graph.innerHTML="";
     _liveNodes.graph.appendChild(liveGraphSVG(state.history, td, ex));
-    _liveNodes.graph.appendChild(el("div",{style:"font-size:10.5px;color:#334155;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
+    _liveNodes.graph.appendChild(el("div",{style:"font-size:10.5px;color:#93a0c8;text-align:center;margin-top:5px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
   }
   if(_liveNodes.pianoKeys){
     var am2=(r&&r.midi!=null)?r.midi:null;
@@ -896,7 +896,7 @@ function updateLiveDOM(){
     }
   }
 }
-function updateTimer(){ if(_liveNodes.timerEl){ var ex=EXERCISES[state.exIdx]; var hasTarget=ex.target!=null; var hit=hasTarget&&state.sec>=ex.target; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#10B981":state.running?"#F8FAFC":"#1E293B"; _liveNodes.metaLine.textContent=hasTarget?(hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+state.settings.targetDb+" dB")):("OBJETIVO: "+state.settings.targetDb+" dB · mide tu volumen"); _liveNodes.metaLine.style.color=hit?"#10B981":"#334155"; } }
+function updateTimer(){ if(_liveNodes.timerEl){ var ex=EXERCISES[state.exIdx]; var hasTarget=ex.target!=null; var hit=hasTarget&&state.sec>=ex.target; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#2e7d32":state.running?"#1a237e":"#c7cee6"; _liveNodes.metaLine.textContent=hasTarget?(hit?"✓ META DE TIEMPO":("META: "+ex.target+"s · "+state.settings.targetDb+" dB")):("OBJETIVO: "+state.settings.targetDb+" dB · mide tu volumen"); _liveNodes.metaLine.style.color=hit?"#2e7d32":"#93a0c8"; } }
 
 /* ─────────── Frases ─────────── */
 function PhraseScreen(){
@@ -911,25 +911,25 @@ function PhraseScreen(){
   // header
   var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 8px;"});
   header.appendChild(btn("‹",BACK_BTN,goHome));
-  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#475569;"},"Ciclo "+cycleNum+"/"+cycles+" · Frase "+(idxInCycle+1)+"/"+perCycle)]));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#5a6899;"},"Ciclo "+cycleNum+"/"+cycles+" · Frase "+(idxInCycle+1)+"/"+perCycle)]));
   header.appendChild(btn([el("span",{style:"font-size:15px;"},"⏸"),el("span",{style:"font-size:13px;font-weight:800;margin-left:4px;"},"💧")],
-    "background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.55);border-radius:12px;padding:8px 11px;color:#3B82F6;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;", pauseSession));
+    "background:rgba(13,71,161,0.12);border:1.5px solid rgba(13,71,161,0.55);border-radius:12px;padding:8px 11px;color:#0d47a1;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;", pauseSession));
   header.appendChild(btn(state.micOn?"🎤 ON":"🎤 Medir",
-    "background:"+(state.micOn?"rgba(16,185,129,0.12)":"rgba(168,85,247,0.12)")+";border:1.5px solid "+(state.micOn?"#10B981":"#A855F7")+";border-radius:12px;padding:8px 12px;color:"+(state.micOn?"#10B981":"#A855F7")+";font-size:12.5px;font-weight:800;flex-shrink:0;",
+    "background:"+(state.micOn?"rgba(46,125,50,0.12)":"rgba(106,27,154,0.12)")+";border:1.5px solid "+(state.micOn?"#2e7d32":"#6a1b9a")+";border-radius:12px;padding:8px 12px;color:"+(state.micOn?"#2e7d32":"#6a1b9a")+";font-size:12.5px;font-weight:800;flex-shrink:0;",
     function(){ if(state.micOn) stopMic(); else startMic(function(){}); }));
   wrap.appendChild(header);
 
   if(state.micError){
-    var errBox=el("div",{style:"margin:4px 16px 6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#FBBF24;line-height:1.6;"});
+    var errBox=el("div",{style:"margin:4px 16px 6px;background:rgba(230,81,0,0.08);border:1px solid rgba(230,81,0,0.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#e65100;line-height:1.6;"});
     errBox.appendChild(el("div",{html:"⚠️ "+state.micError+" El cronómetro funciona sin micrófono."}));
-    errBox.appendChild(btn("🔄 Reintentar","display:block;margin-top:8px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.5);border-radius:8px;padding:7px 14px;color:#FBBF24;font-weight:800;font-size:12px;",function(){ startMic(function(){}); }));
+    errBox.appendChild(btn("🔄 Reintentar","display:block;margin-top:8px;background:rgba(230,81,0,0.15);border:1px solid rgba(230,81,0,0.5);border-radius:8px;padding:7px 14px;color:#e65100;font-weight:800;font-size:12px;",function(){ startMic(function(){}); }));
     wrap.appendChild(errBox);
   }
 
   // dots
   var dots=el("div",{style:"display:flex;justify-content:center;align-items:center;gap:5px;padding:2px 20px 0;flex-wrap:wrap;"});
   for(var i=0;i<perCycle;i++){
-    dots.appendChild(el("div",{style:"border-radius:50%;background:"+(i<idxInCycle?ex.color:i===idxInCycle?"#F8FAFC":"rgba(255,255,255,0.1)")+";width:"+(i===idxInCycle?13:8)+"px;height:"+(i===idxInCycle?13:8)+"px;"}));
+    dots.appendChild(el("div",{style:"border-radius:50%;background:"+(i<idxInCycle?ex.color:i===idxInCycle?"#1a237e":"rgba(26,35,126,0.13)")+";width:"+(i===idxInCycle?13:8)+"px;height:"+(i===idxInCycle?13:8)+"px;"}));
   }
   wrap.appendChild(dots);
 
@@ -937,7 +937,7 @@ function PhraseScreen(){
   if(!state.running && state.rep===0 && state.sec===0){
     body.appendChild(repStepperRow(ex));
     body.appendChild(btn("✏️  Personalizar mis frases"+(state.settings.phrases?" ✓":""),
-      "width:100%;margin-bottom:8px;background:rgba(245,158,11,0.08);border:1.5px solid rgba(245,158,11,0.4);border-radius:14px;padding:11px;color:#F59E0B;font-size:13.5px;font-weight:800;",
+      "width:100%;margin-bottom:8px;background:rgba(230,81,0,0.08);border:1.5px solid rgba(230,81,0,0.4);border-radius:14px;padding:11px;color:#e65100;font-size:13.5px;font-weight:800;",
       function(){ state.editPhrases=true; render(); }));
   }
 
@@ -962,12 +962,12 @@ function PhraseScreen(){
   updateLiveDOM();
 
   // frase a leer
-  var carta=el("div",{class:"card",style:"margin-top:14px;background:#0D1525;border-radius:18px;border:1.5px solid "+ex.color+"40;padding:22px 20px;"});
-  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#F1F5F9;line-height:1.45;text-align:center;"},'"'+exPhrases(ex)[idxInCycle]+'"'));
+  var carta=el("div",{class:"card",style:"margin-top:14px;background:#ffffff;border-radius:18px;border:1.5px solid "+ex.color+"40;padding:22px 20px;"});
+  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#1a237e;line-height:1.45;text-align:center;"},'"'+exPhrases(ex)[idxInCycle]+'"'));
   body.appendChild(carta);
 
   if(!state.micOn && !state.micError){
-    body.appendChild(el("div",{style:"margin-top:10px;font-size:12px;color:#475569;text-align:center;line-height:1.7;"},"Toca ▶ INICIAR para medir tu volumen y tiempo mientras dices la frase en voz alta."));
+    body.appendChild(el("div",{style:"margin-top:10px;font-size:12px;color:#5a6899;text-align:center;line-height:1.7;"},"Toca ▶ INICIAR para medir tu volumen y tiempo mientras dices la frase en voz alta."));
   }
 
   // stats
@@ -977,14 +977,14 @@ function PhraseScreen(){
     if(state.repLog.length>0){
       var avg=Math.round(state.repLog.reduce(function(a,b){return a+b;},0)/state.repLog.length);
       var best=Math.max.apply(null,state.repLog);
-      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"PROM"),el("div",{style:"font-size:22px;font-weight:900;color:#F8FAFC;"},avg+"s")]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"PROM"),el("div",{style:"font-size:22px;font-weight:900;color:#1a237e;"},avg+"s")]));
       stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"MEJOR"),el("div",{style:"font-size:22px;font-weight:900;color:"+ex.color+";"},best+"s")]));
     }
     if(dbSoFar.length){
       var maxDb=Math.max.apply(null,dbSoFar.map(function(d){return d.maxDb;}));
       var pct=Math.round(dbSoFar.reduce(function(a,d){return a+(d.pctOnTarget||0);},0)/dbSoFar.length);
-      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"dB MÁX"),el("div",{style:"font-size:22px;font-weight:900;color:#10B981;"},String(maxDb))]));
-      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"% RANGO"),el("div",{style:"font-size:22px;font-weight:900;color:"+(pct>=50?"#10B981":"#F59E0B")+";"},pct+"%")]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"dB MÁX"),el("div",{style:"font-size:22px;font-weight:900;color:#2e7d32;"},String(maxDb))]));
+      stats.appendChild(el("div",{style:STAT_BOX},[el("div",{style:STAT_LBL},"% RANGO"),el("div",{style:"font-size:22px;font-weight:900;color:"+(pct>=50?"#2e7d32":"#e65100")+";"},pct+"%")]));
     }
     body.appendChild(stats);
   }
@@ -995,7 +995,7 @@ function PhraseScreen(){
   if(!state.running){
     foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  CONTINUAR", BIG_BTN+"background:"+ex.color+";", tickStart));
   } else {
-    foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:#10B981;border:2px solid #10B981;", repDone));
+    foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:#2e7d32;border:2px solid #2e7d32;", repDone));
   }
   wrap.appendChild(foot);
   if(state.paused) wrap.appendChild(pauseOverlay());
@@ -1009,31 +1009,31 @@ function PhraseEditScreen(ex){
   var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 10px;"});
   header.appendChild(btn("‹",BACK_BTN,function(){ state.editPhrases=false; render(); }));
   header.appendChild(el("div",{style:"flex:1;"},[
-    el("div",{style:"font-size:10px;letter-spacing:3px;color:#F59E0B;text-transform:uppercase;margin-bottom:2px;"},"MIS FRASES"),
-    el("div",{style:"font-size:20px;font-weight:900;color:#F8FAFC;"},"Personalizar frases")
+    el("div",{style:"font-size:10px;letter-spacing:3px;color:#e65100;text-transform:uppercase;margin-bottom:2px;"},"MIS FRASES"),
+    el("div",{style:"font-size:20px;font-weight:900;color:#1a237e;"},"Personalizar frases")
   ]));
   wrap.appendChild(header);
-  wrap.appendChild(el("div",{style:"padding:0 20px 14px;font-size:13px;color:#64748B;line-height:1.7;"},
+  wrap.appendChild(el("div",{style:"padding:0 20px 14px;font-size:13px;color:#5a6899;line-height:1.7;"},
     "El protocolo LSVT LOUD usa 10 frases que TÚ dices todos los días: saludos, peticiones, nombres de tu familia. Escríbelas con tus palabras — practicar con frases propias transfiere la voz fuerte a tu vida diaria."));
   var list=el("div",{style:"flex:1;padding:0 16px;display:flex;flex-direction:column;gap:8px;"});
   var cur=exPhrases(ex), inputs=[];
   for(var i=0;i<ex.phrases.length;i++){
-    var inp=el("input",{type:"text",maxlength:"90",style:"flex:1;min-width:0;background:#0D1525;border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px;color:#F1F5F9;font-size:16px;font-family:inherit;"});
+    var inp=el("input",{type:"text",maxlength:"90",style:"flex:1;min-width:0;background:#ffffff;border:1.5px solid rgba(26,35,126,0.13);border-radius:12px;padding:12px 14px;color:#1a237e;font-size:16px;font-family:inherit;"});
     inp.value=cur[i]||ex.phrases[i];
     inputs.push(inp);
     list.appendChild(el("div",{style:"display:flex;align-items:center;gap:8px;"},[
-      el("div",{style:"width:18px;text-align:right;font-size:12px;color:#475569;font-weight:800;flex-shrink:0;"},String(i+1)),
+      el("div",{style:"width:18px;text-align:right;font-size:12px;color:#5a6899;font-weight:800;flex-shrink:0;"},String(i+1)),
       inp
     ]));
   }
   wrap.appendChild(list);
   var foot=el("div",{style:"display:flex;flex-direction:column;gap:10px;padding:16px 20px 44px;"});
-  foot.appendChild(btn("✓  GUARDAR MIS FRASES", BIG_BTN+"background:#F59E0B;color:#3b2503;font-size:17px;", function(){
+  foot.appendChild(btn("✓  GUARDAR MIS FRASES", BIG_BTN+"background:#e65100;color:#ffffff;font-size:17px;", function(){
     state.settings.phrases=inputs.map(function(inp,j){ var v=inp.value.trim(); return v||ex.phrases[j]; });
     saveSettings(state.settings); state.editPhrases=false; render();
   }));
   if(state.settings.phrases){
-    foot.appendChild(btn("↺ Volver a las frases de ejemplo","width:100%;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:11px;color:#64748B;font-size:13px;font-weight:700;", function(){
+    foot.appendChild(btn("↺ Volver a las frases de ejemplo","width:100%;background:none;border:1px solid rgba(26,35,126,0.15);border-radius:12px;padding:11px;color:#5a6899;font-size:13px;font-weight:700;", function(){
       state.settings.phrases=null; saveSettings(state.settings); state.editPhrases=false; render();
     }));
   }
@@ -1125,49 +1125,52 @@ function downloadReadRecording(){
 
 function ReadScreen(){
   var ex=EXERCISES[state.exIdx];
-  var lect=state.readText || {titulo:"Resiliencia y adaptación", texto:ex.text};
+  var lect=state.readText || READINGS[0];
   var running=state.readRunning, done=(state.readSec<=0);
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
   var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 10px;"});
   header.appendChild(btn("‹",BACK_BTN,goHome));
-  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"LECTURA EN VOZ ALTA"),el("div",{style:"font-size:14px;color:#475569;"},"Lee en voz alta durante 5 minutos")]));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"LECTURA EN VOZ ALTA"),el("div",{style:"font-size:14px;color:#5a6899;"},"Lee en voz alta durante 5 minutos")]));
   wrap.appendChild(header);
 
   // cronómetro regresivo (5:00) + grabación
-  var timeColor = done?"#10B981":(running?"#F59E0B":"#64748B");
-  var tbox=el("div",{style:"text-align:center;padding:2px 20px 8px;"});
-  tbox.appendChild(el("div",{style:"font-size:10px;letter-spacing:2px;color:#475569;text-transform:uppercase;margin-bottom:2px;"},"Cuenta regresiva"));
+  var timeColor = done?"#2e7d32":(running?"#e65100":"#5a6899");
+  // Fija arriba: el texto es largo (~5 min de lectura) y el tiempo debe verse al hacer scroll.
+  var tbox=el("div",{style:"position:sticky;top:0;z-index:20;background:rgba(238,241,250,0.96);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);text-align:center;padding:6px 20px 10px;"});
+  tbox.appendChild(el("div",{style:"font-size:10px;letter-spacing:2px;color:#5a6899;text-transform:uppercase;margin-bottom:2px;"},"Cuenta regresiva"));
   var t=el("div",{style:"font-size:54px;font-weight:900;letter-spacing:-2px;line-height:1;color:"+timeColor+";"},fmtTime(state.readSec));
   _readNode=t; tbox.appendChild(t);
   if(!running && !state.recStarted) tbox.appendChild(btn("▶  Comenzar y grabar","margin-top:12px;border:none;border-radius:14px;padding:12px 30px;font-size:15px;font-weight:800;color:#fff;background:"+ex.color+";",readStart));
-  else if(running) tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#EF4444;font-weight:800;"},(state.recording?"🔴 Grabando… ":"")+"¡mantén la voz FUERTE!"));
-  else if(done) tbox.appendChild(el("div",{style:"margin-top:8px;font-size:14px;color:#10B981;font-weight:900;"},"✓ ¡Tiempo completado!"));
+  else if(running) tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#c62828;font-weight:800;"},(state.recording?"🔴 Grabando… ":"")+"¡mantén la voz FUERTE!"));
+  else if(done) tbox.appendChild(el("div",{style:"margin-top:8px;font-size:14px;color:#2e7d32;font-weight:900;"},"✓ ¡Tiempo completado!"));
   wrap.appendChild(tbox);
 
   var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:0 20px;"});
   body.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";margin-bottom:12px;font-weight:700;text-align:center;"},"📖 IMAGINA HABLARLE A ALGUIEN A 3 METROS"));
-  var carta=el("div",{style:"background:#0D1525;border-radius:20px;border:1.5px solid "+ex.color+"30;padding:22px 22px;"});
+  var carta=el("div",{style:"background:#ffffff;border-radius:20px;border:1.5px solid "+ex.color+"30;padding:22px 22px;"});
   carta.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";text-transform:uppercase;font-weight:800;margin-bottom:12px;text-align:center;"},lect.titulo));
-  carta.appendChild(el("div",{style:"font-size:19px;color:#CBD5E1;line-height:1.9;text-align:justify;"},lect.texto));
+  lect.texto.split(/\n\n+/).forEach(function(p,i,arr){
+    carta.appendChild(el("div",{style:"font-size:19px;color:#1a237e;line-height:1.9;text-align:justify;"+(i<arr.length-1?"margin-bottom:16px;":"")},p));
+  });
   body.appendChild(carta);
-  body.appendChild(el("div",{style:"margin-top:14px;font-size:13px;color:#475569;text-align:center;line-height:1.7;"},ex.instruction));
+  body.appendChild(el("div",{style:"margin-top:14px;font-size:13px;color:#5a6899;text-align:center;line-height:1.7;"},ex.instruction));
   wrap.appendChild(body);
 
   var foot=el("div",{style:"padding:16px 20px 44px;"});
   if(running){
-    foot.appendChild(btn("⏹  Terminar y guardar", BIG_BTN+"background:#EF4444;", stopReading));
+    foot.appendChild(btn("⏹  Terminar y guardar", BIG_BTN+"background:#c62828;", stopReading));
   } else if(state.recStarted && !state.recBlob){
-    foot.appendChild(el("div",{style:"text-align:center;color:#64748B;font-size:14px;padding:10px;"},"Preparando la grabación…"));
+    foot.appendChild(el("div",{style:"text-align:center;color:#5a6899;font-size:14px;padding:10px;"},"Preparando la grabación…"));
   } else if(state.recBlob){
     if(state.recURL) foot.appendChild(el("audio",{src:state.recURL,controls:"controls",style:"width:100%;margin-bottom:12px;"}));
     foot.appendChild(btn("📤  Enviar al médico (WhatsApp)", BIG_BTN+"background:#25D366;color:#04310f;", shareReadRecording));
     var row=el("div",{style:"display:flex;gap:10px;margin-top:10px;"});
-    row.appendChild(btn("⬇ Descargar", "flex:1;border:1.5px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px;font-size:14px;font-weight:800;color:#F1F5F9;background:#0D1525;", downloadReadRecording));
+    row.appendChild(btn("⬇ Descargar", "flex:1;border:1.5px solid rgba(26,35,126,0.15);border-radius:16px;padding:14px;font-size:14px;font-weight:800;color:#1a237e;background:#ffffff;", downloadReadRecording));
     row.appendChild(btn("✓ Completar", "flex:1;border:none;border-radius:16px;padding:14px;font-size:14px;font-weight:800;color:#fff;background:"+ex.color+";", function(){ recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
     foot.appendChild(row);
   } else {
-    if(state.recUnsupported) foot.appendChild(el("div",{style:"text-align:center;color:#FBBF24;font-size:12px;margin-bottom:10px;line-height:1.5;"},"⚠️ La grabación no está disponible en este navegador. Abre la app en Safari."));
-    foot.appendChild(btn("✓  Lectura completa (sin grabar)", BIG_BTN+"background:#0D1525;border:1.5px solid rgba(255,255,255,0.12);", function(){ recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
+    if(state.recUnsupported) foot.appendChild(el("div",{style:"text-align:center;color:#e65100;font-size:12px;margin-bottom:10px;line-height:1.5;"},"⚠️ La grabación no está disponible en este navegador. Abre la app en Safari."));
+    foot.appendChild(btn("✓  Lectura completa (sin grabar)", BIG_BTN+"background:#ffffff;border:1.5px solid rgba(26,35,126,0.15);", function(){ recordExercise(ex.id,{type:"reading",name:ex.name}); finishEx(ex.id); }));
   }
   wrap.appendChild(foot);
   return wrap;
@@ -1179,11 +1182,11 @@ function DoneScreen(){
   var g=scoreLabel(agg.overall);
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;align-items:center;text-align:center;padding:38px 26px 40px;"});
   wrap.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;"},"🎉"));
-  wrap.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#10B981;margin-bottom:16px;text-transform:uppercase;"},"Sesión completada"));
+  wrap.appendChild(el("div",{style:"font-size:11px;letter-spacing:4px;color:#2e7d32;margin-bottom:16px;text-transform:uppercase;"},"Sesión completada"));
 
   // tarjeta de calificación
-  var card=el("div",{class:"card",style:"width:100%;max-width:340px;background:#0D1525;border:1.5px solid "+g.color+"55;border-radius:22px;padding:22px 20px;margin-bottom:18px;"});
-  card.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:#64748B;text-transform:uppercase;margin-bottom:4px;text-align:center;"},"Calificación de la sesión"));
+  var card=el("div",{class:"card",style:"width:100%;max-width:340px;background:#ffffff;border:1.5px solid "+g.color+"55;border-radius:22px;padding:22px 20px;margin-bottom:18px;"});
+  card.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:#5a6899;text-transform:uppercase;margin-bottom:4px;text-align:center;"},"Calificación de la sesión"));
   card.appendChild(el("div",{style:"font-size:66px;font-weight:900;line-height:1;letter-spacing:-2px;color:"+g.color+";text-align:center;"}, agg.overall!=null?String(agg.overall):"—"));
   card.appendChild(el("div",{style:"font-size:16px;font-weight:800;color:"+g.color+";margin-top:2px;margin-bottom:18px;text-align:center;"}, g.txt));
   card.appendChild(scoreDimRow("Intensidad", agg.intensidad));
@@ -1191,11 +1194,11 @@ function DoneScreen(){
   card.appendChild(scoreDimRow("Esfuerzo", agg.esfuerzo));
   wrap.appendChild(card);
 
-  wrap.appendChild(el("div",{style:"font-size:13px;color:#64748B;line-height:1.9;margin-bottom:18px;",html:"<span style='color:#3B82F6;font-weight:700;'>✓ Guardado en tu historial</span><br><span style='color:#10B981;font-weight:800;'>¡PIENSA SIEMPRE FUERTE!</span>"}));
+  wrap.appendChild(el("div",{style:"font-size:13px;color:#5a6899;line-height:1.9;margin-bottom:18px;",html:"<span style='color:#0d47a1;font-weight:700;'>✓ Guardado en tu historial</span><br><span style='color:#2e7d32;font-weight:800;'>¡PIENSA SIEMPRE FUERTE!</span>"}));
 
   var box=el("div",{style:"display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;"});
-  box.appendChild(btn("📊 Ver mi historial", BIG_BTN+"background:#0D1525;border:1.5px solid rgba(59,130,246,0.4);font-size:16px;padding:16px;", function(){go("history");}));
-  box.appendChild(btn("Nueva sesión", BIG_BTN+"background:#10B981;font-size:16px;padding:16px;", newSession));
+  box.appendChild(btn("📊 Ver mi historial", BIG_BTN+"background:#ffffff;border:1.5px solid rgba(13,71,161,0.4);font-size:16px;padding:16px;", function(){go("history");}));
+  box.appendChild(btn("Nueva sesión", BIG_BTN+"background:#2e7d32;font-size:16px;padding:16px;", newSession));
   wrap.appendChild(box);
   return wrap;
 }
@@ -1234,45 +1237,45 @@ function downloadBackup(){
   setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
 }
 function chartCard(title, note, data, mn, mx, goal, color){
-  var box=el("div",{style:"margin:0 16px 14px;background:#0D1525;border-radius:16px;padding:16px 16px 12px;border:1px solid rgba(255,255,255,0.05);"});
+  var box=el("div",{style:"margin:0 16px 14px;background:#ffffff;border-radius:16px;padding:16px 16px 12px;border:1px solid rgba(26,35,126,0.07);"});
   box.appendChild(el("div",{style:"font-size:10px;letter-spacing:2px;color:"+color+";text-transform:uppercase;margin-bottom:12px;"},title));
   var bars=el("div",{style:"display:flex;align-items:flex-end;gap:5px;height:88px;"});
   data.forEach(function(d){
     var h=Math.max(8,clamp((d.v-mn)/(mx-mn),0,1)*100);
     var ok=d.v>=goal;
     bars.appendChild(el("div",{style:"flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;"},[
-      el("div",{style:"font-size:9px;color:#64748B;font-weight:700;"},String(d.v)),
-      el("div",{style:"width:100%;height:"+h+"%;border-radius:5px 5px 0 0;background:"+(ok?"linear-gradient(180deg,#10B981,#059669)":"linear-gradient(180deg,"+color+","+color+"99)")+";"})
+      el("div",{style:"font-size:9px;color:#5a6899;font-weight:700;"},String(d.v)),
+      el("div",{style:"width:100%;height:"+h+"%;border-radius:5px 5px 0 0;background:"+(ok?"linear-gradient(180deg,#2e7d32,#1b5e20)":"linear-gradient(180deg,"+color+","+color+"99)")+";"})
     ]));
   });
   box.appendChild(bars);
-  box.appendChild(el("div",{style:"font-size:9.5px;color:#334155;margin-top:8px;text-align:center;"},note+" · Últimas "+data.length+" sesiones"));
+  box.appendChild(el("div",{style:"font-size:9.5px;color:#93a0c8;margin-top:8px;text-align:center;"},note+" · Últimas "+data.length+" sesiones"));
   return box;
 }
 function HistoryScreen(){
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
   var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 18px;"});
   header.appendChild(btn("‹",BACK_BTN,goHome));
-  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:#3B82F6;text-transform:uppercase;margin-bottom:2px;"},"MI PROGRESO"),el("div",{style:"font-size:22px;font-weight:900;color:#F8FAFC;"},"Historial")]));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:#0d47a1;text-transform:uppercase;margin-bottom:2px;"},"MI PROGRESO"),el("div",{style:"font-size:22px;font-weight:900;color:#1a237e;"},"Historial")]));
   wrap.appendChild(header);
 
   var streak=computeStreak(state.log);
   var uniq={}; state.log.forEach(function(s){uniq[localDay(s.date)]=1;});
   var sum=el("div",{style:"display:flex;gap:10px;padding:0 16px 14px;"});
-  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"SESIONES"),el("div",{style:"font-size:26px;font-weight:900;color:#F8FAFC;"},String(state.log.length))]));
-  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"RACHA"),el("div",{style:"font-size:26px;font-weight:900;color:#F59E0B;"},"🔥 "+streak)]));
-  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"DÍAS ÚNICOS"),el("div",{style:"font-size:26px;font-weight:900;color:#10B981;"},String(Object.keys(uniq).length))]));
+  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"SESIONES"),el("div",{style:"font-size:26px;font-weight:900;color:#1a237e;"},String(state.log.length))]));
+  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"RACHA"),el("div",{style:"font-size:26px;font-weight:900;color:#e65100;"},"🔥 "+streak)]));
+  sum.appendChild(el("div",{style:STAT_BOX+"padding:14px;"},[el("div",{style:STAT_LBL},"DÍAS ÚNICOS"),el("div",{style:"font-size:26px;font-weight:900;color:#2e7d32;"},String(Object.keys(uniq).length))]));
   wrap.appendChild(sum);
 
   var secData=state.log.filter(function(s){return s.exercises&&s.exercises[0];}).sort(function(a,b){return a.id-b.id;}).slice(-12);
   var dbData=state.log.filter(function(s){return s.exercises&&s.exercises[0]&&s.exercises[0].avgDb;}).sort(function(a,b){return a.id-b.id;}).slice(-12);
-  if(secData.length) wrap.appendChild(chartCard("⏱ Duración promedio AHHH (seg)","Verde = meta de 8s alcanzada",secData.map(function(s){return {v:s.exercises[0].avg};}),0,15,8,"#3B82F6"));
-  if(dbData.length) wrap.appendChild(chartCard("🔊 Volumen promedio AHHH (dB)","Verde = meta de "+state.settings.targetDb+" dB",dbData.map(function(s){return {v:s.exercises[0].avgDb};}),55,100,state.settings.targetDb,"#A855F7"));
+  if(secData.length) wrap.appendChild(chartCard("⏱ Duración promedio AHHH (seg)","Verde = meta de 8s alcanzada",secData.map(function(s){return {v:s.exercises[0].avg};}),0,15,8,"#0d47a1"));
+  if(dbData.length) wrap.appendChild(chartCard("🔊 Volumen promedio AHHH (dB)","Verde = meta de "+state.settings.targetDb+" dB",dbData.map(function(s){return {v:s.exercises[0].avgDb};}),55,100,state.settings.targetDb,"#6a1b9a"));
 
   var list=el("div",{style:"flex:1;padding:0 16px;display:flex;flex-direction:column;gap:8px;"});
   var sorted=state.log.slice().sort(function(a,b){return b.id-a.id;});
   if(!sorted.length){
-    list.appendChild(el("div",{style:"text-align:center;color:#334155;font-size:14px;padding:40px 20px;line-height:1.8;",html:"Aún no hay sesiones registradas.<br>Completa un ejercicio y aparecerá aquí. 💪"}));
+    list.appendChild(el("div",{style:"text-align:center;color:#93a0c8;font-size:14px;padding:40px 20px;line-height:1.8;",html:"Aún no hay sesiones registradas.<br>Completa un ejercicio y aparecerá aquí. 💪"}));
   }
   sorted.forEach(function(s){
     var exs=s.exercises||{}, count=Object.keys(exs).length, complete=count>=EXERCISES.length;
@@ -1286,18 +1289,18 @@ function HistoryScreen(){
     var agg=aggScores(exs);
     var gl=scoreLabel(agg.overall);
     var dots=el("div",{style:"display:flex;gap:3px;margin-top:6px;"});
-    EXERCISES.forEach(function(e){ dots.appendChild(el("div",{style:"width:7px;height:7px;border-radius:50%;background:"+(exs[e.id]?e.color:"rgba(255,255,255,0.08)")+";"})); });
+    EXERCISES.forEach(function(e){ dots.appendChild(el("div",{style:"width:7px;height:7px;border-radius:50%;background:"+(exs[e.id]?e.color:"rgba(26,35,126,0.11)")+";"})); });
     var gradeBadge = agg.overall!=null
       ? el("div",{style:"flex-shrink:0;text-align:center;width:46px;"},[
           el("div",{style:"font-size:23px;font-weight:900;line-height:1;color:"+gl.color+";"},String(agg.overall)),
-          el("div",{style:"font-size:8px;color:#64748B;letter-spacing:0.5px;margin-top:1px;text-transform:uppercase;"},gl.txt)
+          el("div",{style:"font-size:8px;color:#5a6899;letter-spacing:0.5px;margin-top:1px;text-transform:uppercase;"},gl.txt)
         ])
       : null;
-    list.appendChild(el("div",{style:"background:#0D1525;border-radius:14px;padding:13px 15px;border:1px solid "+(complete?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.05)")+";display:flex;align-items:center;gap:12px;"},[
-      el("div",{style:"width:40px;height:40px;border-radius:11px;flex-shrink:0;background:"+(complete?"rgba(16,185,129,0.12)":"rgba(255,255,255,0.03)")+";display:flex;align-items:center;justify-content:center;font-size:18px;"},complete?"🏆":"📝"),
+    list.appendChild(el("div",{style:"background:#ffffff;border-radius:14px;padding:13px 15px;border:1px solid "+(complete?"rgba(46,125,50,0.3)":"rgba(26,35,126,0.07)")+";display:flex;align-items:center;gap:12px;"},[
+      el("div",{style:"width:40px;height:40px;border-radius:11px;flex-shrink:0;background:"+(complete?"rgba(46,125,50,0.12)":"rgba(26,35,126,0.03)")+";display:flex;align-items:center;justify-content:center;font-size:18px;"},complete?"🏆":"📝"),
       el("div",{style:"flex:1;min-width:0;"},[
-        el("div",{style:"font-size:14px;font-weight:800;color:#F1F5F9;text-transform:capitalize;"},fdate+" · "+fhour),
-        el("div",{style:"font-size:11.5px;color:#475569;margin-top:2px;line-height:1.5;"},count+"/"+EXERCISES.length+" ejercicios"+(parts.length?"  ·  "+parts.join("  ·  "):"")),
+        el("div",{style:"font-size:14px;font-weight:800;color:#1a237e;text-transform:capitalize;"},fdate+" · "+fhour),
+        el("div",{style:"font-size:11.5px;color:#5a6899;margin-top:2px;line-height:1.5;"},count+"/"+EXERCISES.length+" ejercicios"+(parts.length?"  ·  "+parts.join("  ·  "):"")),
         dots
       ]),
       gradeBadge
@@ -1308,8 +1311,8 @@ function HistoryScreen(){
   if(state.log.length>0){
     var foot=el("div",{style:"display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 24px 44px;"});
     foot.appendChild(btn("📤  Compartir mi progreso","width:100%;max-width:300px;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;color:#04310f;background:#25D366;", shareProgress));
-    foot.appendChild(btn("⬇ Respaldar datos (JSON)","width:100%;max-width:300px;background:#0D1525;border:1.5px solid rgba(255,255,255,0.12);border-radius:14px;padding:12px;color:#94A3B8;font-size:13px;font-weight:700;", downloadBackup));
-    foot.appendChild(btn("Borrar historial","background:none;border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:10px 24px;color:#7F1D1D;font-size:13px;", function(){
+    foot.appendChild(btn("⬇ Respaldar datos (JSON)","width:100%;max-width:300px;background:#ffffff;border:1.5px solid rgba(26,35,126,0.15);border-radius:14px;padding:12px;color:#5a6899;font-size:13px;font-weight:700;", downloadBackup));
+    foot.appendChild(btn("Borrar historial","background:none;border:1px solid rgba(198,40,40,0.25);border-radius:10px;padding:10px 24px;color:#c62828;font-size:13px;", function(){
       if(confirm("¿Borrar todo el historial? Esta acción no se puede deshacer.")){ state.log=[]; saveLog(state.log); state.sessionId=null; render(); }
     }));
     wrap.appendChild(foot);
@@ -1318,6 +1321,12 @@ function HistoryScreen(){
 }
 
 /* ─────────── Piano reutilizable ─────────── */
+// Color de cada tecla según su zona vocal (igual que la leyenda del Medidor).
+function keyZone(m){
+  if(m<45)  return {pastel:"#d6efdc", white:"#eef8f0", dark:"#1b5e20", strong:"#2e7d32", lbl:"#2e7d32"}; // grave
+  if(m<55)  return {pastel:"#dbe6fb", white:"#eef3fd", dark:"#002171", strong:"#0d47a1", lbl:"#0d47a1"}; // habla
+  return          {pastel:"#eadaf6", white:"#f6eefb", dark:"#4a148c", strong:"#6a1b9a", lbl:"#6a1b9a"};  // agudo
+}
 function buildPiano(activeMidi, whiteH){
   whiteH=whiteH||138; var blackH=Math.round(whiteH*0.62);
   var keys={};
@@ -1331,17 +1340,21 @@ function buildPiano(activeMidi, whiteH){
     var isDO=(m%12===0);
     var container=el("div",{style:"position:relative;"});
     (function(mm){
-      var whiteSpan=el("span",{style:"font-size:8.5px;font-weight:800;color:"+(isActive?"#fff":isDO?"#7C3AED":"#94A3B8")+";"}, (isDO||isActive)?midiName(mm):"");
+      var wz=keyZone(mm);
+      // Las teclas DO llevan tinte pastel (marca la octava); el resto, casi blanco con el matiz de su zona.
+      var wBase=isDO?wz.pastel:wz.white;
+      var whiteSpan=el("span",{style:"font-size:8.5px;font-weight:800;color:"+(isActive?"#fff":isDO?wz.lbl:"#5a6899")+";"}, (isDO||isActive)?midiName(mm):"");
       var white=btn(whiteSpan,
-        "width:"+WHITE_W+"px;height:"+whiteH+"px;background:"+(isActive?"#A855F7":"#F1F5F9")+";border:1px solid #0B1120;border-radius:0 0 6px 6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;", function(){ playTone(mm); });
+        "width:"+WHITE_W+"px;height:"+whiteH+"px;background:"+(isActive?wz.strong:wBase)+";border:1px solid #c7cee6;border-bottom:3px solid "+wz.pastel+";border-radius:0 0 6px 6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;", function(){ playTone(mm); });
       container.appendChild(white);
-      keys[mm]={btn:white,span:whiteSpan,isDO:isDO,black:false};
+      keys[mm]={btn:white,span:whiteSpan,isDO:isDO,black:false,base:wBase,strong:wz.strong,lbl:wz.lbl};
       var nb=mm+1;
       if(blackSet[nb%12]){
+        var bz=keyZone(nb);
         var blackActive=activeMidi===nb;
-        var black=btn("", "position:absolute;top:0;right:-"+(BLACK_W/2)+"px;width:"+BLACK_W+"px;height:"+blackH+"px;z-index:2;background:"+(blackActive?"#A855F7":"#0B1120")+";border:1px solid #000;border-radius:0 0 5px 5px;", function(e){ e.stopPropagation(); playTone(nb); });
+        var black=btn("", "position:absolute;top:0;right:-"+(BLACK_W/2)+"px;width:"+BLACK_W+"px;height:"+blackH+"px;z-index:2;background:"+(blackActive?bz.strong:bz.dark)+";border:1px solid #0d1657;border-radius:0 0 5px 5px;", function(e){ e.stopPropagation(); playTone(nb); });
         container.appendChild(black);
-        keys[nb]={btn:black,black:true};
+        keys[nb]={btn:black,black:true,base:bz.dark,strong:bz.strong};
       }
     })(m);
     kb.appendChild(container);
@@ -1355,20 +1368,20 @@ function TunerScreen(){
   var wrap=el("div",{style:"display:flex;flex-direction:column;flex:1;"});
   var header=el("div",{style:"display:flex;align-items:center;gap:10px;padding:48px 20px 12px;"});
   header.appendChild(btn("‹",BACK_BTN,goHome));
-  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:#A855F7;text-transform:uppercase;margin-bottom:2px;"},"MEDIDOR DE VOZ"),el("div",{style:"font-size:21px;font-weight:900;color:#F8FAFC;"},"🎹 dB + Tono")]));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:#6a1b9a;text-transform:uppercase;margin-bottom:2px;"},"MEDIDOR DE VOZ"),el("div",{style:"font-size:21px;font-weight:900;color:#1a237e;"},"🎹 dB + Tono")]));
   header.appendChild(btn("⚙️",BACK_BTN+"font-size:16px;padding:9px 12px;", function(){ state._cfg=!state._cfg; render(); }));
-  header.appendChild(btn(state.micOn?"⏹":"🎤","background:"+(state.micOn?"rgba(239,68,68,0.15)":"rgba(168,85,247,0.15)")+";border:1.5px solid "+(state.micOn?"#EF4444":"#A855F7")+";border-radius:12px;padding:9px 13px;color:"+(state.micOn?"#EF4444":"#A855F7")+";font-size:13px;font-weight:800;flex-shrink:0;", function(){ if(state.micOn) stopMic(); else startMic(function(){}); }));
+  header.appendChild(btn(state.micOn?"⏹":"🎤","background:"+(state.micOn?"rgba(198,40,40,0.15)":"rgba(106,27,154,0.15)")+";border:1.5px solid "+(state.micOn?"#c62828":"#6a1b9a")+";border-radius:12px;padding:9px 13px;color:"+(state.micOn?"#c62828":"#6a1b9a")+";font-size:13px;font-weight:800;flex-shrink:0;", function(){ if(state.micOn) stopMic(); else startMic(function(){}); }));
   wrap.appendChild(header);
 
   if(state.micError){
-    wrap.appendChild(el("div",{style:"margin:0 16px 10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:11px 14px;font-size:12px;color:#FBBF24;line-height:1.55;",html:"⚠️ "+state.micError}));
+    wrap.appendChild(el("div",{style:"margin:0 16px 10px;background:rgba(230,81,0,0.08);border:1px solid rgba(230,81,0,0.3);border-radius:12px;padding:11px 14px;font-size:12px;color:#e65100;line-height:1.55;",html:"⚠️ "+state.micError}));
   }
 
   if(state._cfg){
-    var cfg=el("div",{style:"margin:0 16px 12px;background:#0D1525;border-radius:14px;border:1px solid rgba(255,255,255,0.07);padding:13px 15px;display:flex;flex-direction:column;gap:12px;"});
+    var cfg=el("div",{style:"margin:0 16px 12px;background:#ffffff;border-radius:14px;border:1px solid rgba(26,35,126,0.1);padding:13px 15px;display:flex;flex-direction:column;gap:12px;"});
     cfg.appendChild(cfgRow("🎯 Meta de volumen", state.settings.targetDb+" dB", function(){ state.settings.targetDb=clamp(state.settings.targetDb-5,60,100); saveSettings(state.settings); render(); }, function(){ state.settings.targetDb=clamp(state.settings.targetDb+5,60,100); saveSettings(state.settings); render(); }));
     cfg.appendChild(cfgRow("⚖️ Calibración dB", "+"+state.settings.calib, function(){ state.settings.calib=clamp(state.settings.calib-2,70,115); saveSettings(state.settings); render(); }, function(){ state.settings.calib=clamp(state.settings.calib+2,70,115); saveSettings(state.settings); render(); }));
-    cfg.appendChild(el("div",{style:"font-size:10.5px;color:#334155;line-height:1.6;"},"Los dB son estimados (el micrófono del teléfono no está calibrado). El rango objetivo es tu meta a meta+15 dB. Mantén siempre la misma distancia (~30 cm) para comparar entre sesiones."));
+    cfg.appendChild(el("div",{style:"font-size:10.5px;color:#93a0c8;line-height:1.6;"},"Los dB son estimados (el micrófono del teléfono no está calibrado). El rango objetivo es tu meta a meta+15 dB. Mantén siempre la misma distancia (~30 cm) para comparar entre sesiones."));
     wrap.appendChild(cfg);
   }
 
@@ -1377,16 +1390,16 @@ function TunerScreen(){
   var activeMidi=(r&&r.midi!=null)?r.midi:null;
 
   // display cards
-  var volCard=el("div",{style:"flex:1.1;background:#0D1525;border-radius:18px;padding:16px 10px;border:1.5px solid "+(zone.key!=="silent"?zone.color+"70":"rgba(255,255,255,0.06)")+";text-align:center;"});
-  var volNum=el("div",{style:"font-size:54px;font-weight:900;line-height:1;letter-spacing:-2px;color:"+(zone.key!=="silent"?zone.color:"#1E293B")+";"}, (r&&r.db>=45)?String(r.db):"——");
-  var volLabel=el("div",{style:"font-size:11px;font-weight:800;margin-top:4px;color:"+(zone.key!=="silent"?zone.color:"#64748B")+";"}, zone.key!=="silent"?zone.label:"dB est.");
-  volCard.appendChild(el("div",{style:"font-size:9.5px;letter-spacing:2px;color:#475569;margin-bottom:4px;"},"VOLUMEN"));
+  var volCard=el("div",{style:"flex:1.1;background:#ffffff;border-radius:18px;padding:16px 10px;border:1.5px solid "+(zone.key!=="silent"?zone.color+"70":"rgba(26,35,126,0.09)")+";text-align:center;"});
+  var volNum=el("div",{style:"font-size:54px;font-weight:900;line-height:1;letter-spacing:-2px;color:"+(zone.key!=="silent"?zone.color:"#c7cee6")+";"}, (r&&r.db>=45)?String(r.db):"——");
+  var volLabel=el("div",{style:"font-size:11px;font-weight:800;margin-top:4px;color:"+(zone.key!=="silent"?zone.color:"#5a6899")+";"}, zone.key!=="silent"?zone.label:"dB est.");
+  volCard.appendChild(el("div",{style:"font-size:9.5px;letter-spacing:2px;color:#5a6899;margin-bottom:4px;"},"VOLUMEN"));
   volCard.appendChild(volNum); volCard.appendChild(volLabel);
 
-  var noteCard=el("div",{style:"flex:1;background:#0D1525;border-radius:18px;padding:16px 10px;border:1.5px solid rgba(168,85,247,0.25);text-align:center;"});
-  var noteNum=el("div",{style:"font-size:40px;font-weight:900;line-height:1.3;letter-spacing:-1px;color:"+(activeMidi!=null?"#A855F7":"#1E293B")+";"}, activeMidi!=null?midiName(activeMidi):"——");
-  var noteFreq=el("div",{style:"font-size:11px;color:#64748B;font-weight:700;margin-top:3px;"}, (r&&r.freq)?(r.freq+" Hz"):"· · ·");
-  noteCard.appendChild(el("div",{style:"font-size:9.5px;letter-spacing:2px;color:#475569;margin-bottom:4px;"},"NOTA"));
+  var noteCard=el("div",{style:"flex:1;background:#ffffff;border-radius:18px;padding:16px 10px;border:1.5px solid rgba(106,27,154,0.25);text-align:center;"});
+  var noteNum=el("div",{style:"font-size:40px;font-weight:900;line-height:1.3;letter-spacing:-1px;color:"+(activeMidi!=null?"#6a1b9a":"#c7cee6")+";"}, activeMidi!=null?midiName(activeMidi):"——");
+  var noteFreq=el("div",{style:"font-size:11px;color:#5a6899;font-weight:700;margin-top:3px;"}, (r&&r.freq)?(r.freq+" Hz"):"· · ·");
+  noteCard.appendChild(el("div",{style:"font-size:9.5px;letter-spacing:2px;color:#5a6899;margin-bottom:4px;"},"NOTA"));
   noteCard.appendChild(noteNum); noteCard.appendChild(noteFreq);
 
   var cards=el("div",{style:"display:flex;gap:10px;padding:4px 16px 0;align-items:stretch;"});
@@ -1397,10 +1410,10 @@ function TunerScreen(){
   var dbPct=r?clamp((r.db-40)/(105-40),0,1)*100:0;
   var tPct=clamp((td-40)/(105-40),0,1)*100;
   var barWrap=el("div",{style:"padding:12px 20px 0;"});
-  var bar=el("div",{style:"position:relative;height:14px;background:#0F1829;border-radius:99px;"});
-  var barFill=el("div",{style:"position:absolute;left:0;top:0;bottom:0;width:"+dbPct+"%;border-radius:99px;background:"+((zone.key==="ok"||zone.key==="high")?"linear-gradient(90deg,#3B82F6,#10B981)":"linear-gradient(90deg,#3B82F6,#A855F7)")+";"});
+  var bar=el("div",{style:"position:relative;height:14px;background:#dde3f3;border-radius:99px;"});
+  var barFill=el("div",{style:"position:absolute;left:0;top:0;bottom:0;width:"+dbPct+"%;border-radius:99px;background:"+((zone.key==="ok"||zone.key==="high")?"linear-gradient(90deg,#0d47a1,#2e7d32)":"linear-gradient(90deg,#0d47a1,#6a1b9a)")+";"});
   bar.appendChild(barFill);
-  bar.appendChild(el("div",{style:"position:absolute;left:"+tPct+"%;top:-4px;bottom:-4px;width:3px;background:#F59E0B;border-radius:2px;transform:translateX(-50%);"}));
+  bar.appendChild(el("div",{style:"position:absolute;left:"+tPct+"%;top:-4px;bottom:-4px;width:3px;background:#e65100;border-radius:2px;transform:translateX(-50%);"}));
   barWrap.appendChild(bar);
   wrap.appendChild(barWrap);
 
@@ -1413,11 +1426,11 @@ function TunerScreen(){
   _tunerNodes={volCard:volCard,volNum:volNum,volLabel:volLabel,noteNum:noteNum,noteFreq:noteFreq,barFill:barFill,keys:pianoKeys,activeMidi:activeMidi};
 
   var guide=el("div",{style:"display:flex;gap:8px;justify-content:center;padding:10px 16px 0;flex-wrap:wrap;"});
-  [["🔉 Grave","DO2 – SOL2","#10B981"],["🗣️ Habla","LA2 – MI3","#3B82F6"],["📢 Agudo","SOL3 +","#A855F7"]].forEach(function(g){
-    guide.appendChild(el("div",{style:"background:"+g[2]+"10;border:1px solid "+g[2]+"30;border-radius:10px;padding:6px 12px;font-size:11px;color:"+g[2]+";font-weight:700;",html:g[0]+" <span style='color:#64748B;font-weight:500;'>"+g[1]+"</span>"}));
+  [["🔉 Grave","DO2 – SOL2","#2e7d32"],["🗣️ Habla","LA2 – MI3","#0d47a1"],["📢 Agudo","SOL3 +","#6a1b9a"]].forEach(function(g){
+    guide.appendChild(el("div",{style:"background:"+g[2]+"10;border:1px solid "+g[2]+"30;border-radius:10px;padding:6px 12px;font-size:11px;color:"+g[2]+";font-weight:700;",html:g[0]+" <span style='color:#5a6899;font-weight:500;'>"+g[1]+"</span>"}));
   });
   pianoWrap.appendChild(guide);
-  pianoWrap.appendChild(el("div",{style:"font-size:11.5px;color:#334155;text-align:center;padding:10px 28px 38px;line-height:1.7;",html:"💡 <b style='color:#475569;'>Toca una tecla</b> para escuchar el tono · <b style='color:#475569;'>🎤</b> para medir tu voz · 📏 ~30 cm"}));
+  pianoWrap.appendChild(el("div",{style:"font-size:11.5px;color:#93a0c8;text-align:center;padding:10px 28px 38px;line-height:1.7;",html:"💡 <b style='color:#5a6899;'>Toca una tecla</b> para escuchar el tono · <b style='color:#5a6899;'>🎤</b> para medir tu voz · 📏 ~30 cm"}));
   wrap.appendChild(pianoWrap);
   return wrap;
 }
@@ -1429,19 +1442,19 @@ function updateTunerDOM(){
   var zone=dbZone(r?r.db:null, td);
   var activeMidi=(r&&r.midi!=null)?r.midi:null;
   // tarjeta volumen
-  _tunerNodes.volCard.style.borderColor=(zone.key!=="silent"?zone.color+"70":"rgba(255,255,255,0.06)");
+  _tunerNodes.volCard.style.borderColor=(zone.key!=="silent"?zone.color+"70":"rgba(26,35,126,0.09)");
   _tunerNodes.volNum.textContent=(r&&r.db>=45)?String(r.db):"——";
-  _tunerNodes.volNum.style.color=(zone.key!=="silent"?zone.color:"#1E293B");
+  _tunerNodes.volNum.style.color=(zone.key!=="silent"?zone.color:"#c7cee6");
   _tunerNodes.volLabel.textContent=zone.key!=="silent"?zone.label:"dB est.";
-  _tunerNodes.volLabel.style.color=(zone.key!=="silent"?zone.color:"#64748B");
+  _tunerNodes.volLabel.style.color=(zone.key!=="silent"?zone.color:"#5a6899");
   // tarjeta nota
   _tunerNodes.noteNum.textContent=activeMidi!=null?midiName(activeMidi):"——";
-  _tunerNodes.noteNum.style.color=(activeMidi!=null?"#A855F7":"#1E293B");
+  _tunerNodes.noteNum.style.color=(activeMidi!=null?"#6a1b9a":"#c7cee6");
   _tunerNodes.noteFreq.textContent=(r&&r.freq)?(r.freq+" Hz"):"· · ·";
   // barra dB
   var dbPct=r?clamp((r.db-40)/(105-40),0,1)*100:0;
   _tunerNodes.barFill.style.width=dbPct+"%";
-  _tunerNodes.barFill.style.background=(zone.key==="ok"||zone.key==="high")?"linear-gradient(90deg,#3B82F6,#10B981)":"linear-gradient(90deg,#3B82F6,#A855F7)";
+  _tunerNodes.barFill.style.background=(zone.key==="ok"||zone.key==="high")?"linear-gradient(90deg,#0d47a1,#2e7d32)":"linear-gradient(90deg,#0d47a1,#6a1b9a)";
   // piano: resaltar tecla activa
   if(_tunerNodes.activeMidi!==activeMidi){
     var prev=_tunerNodes.activeMidi, keys=_tunerNodes.keys;
@@ -1452,19 +1465,19 @@ function updateTunerDOM(){
 }
 function setKeyActive(k,midi,on){
   if(k.black){
-    k.btn.style.background=on?"#A855F7":"#0B1120";
+    k.btn.style.background=on?k.strong:k.base;
   } else {
-    k.btn.style.background=on?"#A855F7":"#F1F5F9";
+    k.btn.style.background=on?k.strong:k.base;
     k.span.textContent=(k.isDO||on)?midiName(midi):"";
-    k.span.style.color=on?"#fff":k.isDO?"#7C3AED":"#94A3B8";
+    k.span.style.color=on?"#fff":k.isDO?k.lbl:"#5a6899";
   }
 }
 function cfgRow(label, value, onDec, onInc){
-  var b="width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#F1F5F9;font-size:18px;font-weight:800;";
+  var b="width:34px;height:34px;border-radius:9px;border:1px solid rgba(26,35,126,0.15);background:rgba(26,35,126,0.07);color:#1a237e;font-size:18px;font-weight:800;";
   return el("div",{style:"display:flex;align-items:center;gap:10px;"},[
-    el("div",{style:"flex:1;font-size:13px;color:#94A3B8;font-weight:600;"},label),
+    el("div",{style:"flex:1;font-size:13px;color:#5a6899;font-weight:600;"},label),
     btn("−",b,onDec),
-    el("div",{style:"min-width:62px;text-align:center;font-size:15px;font-weight:900;color:#F8FAFC;"},value),
+    el("div",{style:"min-width:62px;text-align:center;font-size:15px;font-weight:900;color:#1a237e;"},value),
     btn("+",b,onInc)
   ]);
 }

@@ -1,5 +1,5 @@
 /* Service Worker LSVT LOUD — cachea la app para uso 100% offline */
-var CACHE = "lsvt-loud-v12";
+var CACHE = "lsvt-loud-v13";
 var ASSETS = [
   "./",
   "./index.html",
