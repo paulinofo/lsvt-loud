@@ -430,7 +430,8 @@ function startMic(cb){
           if(EXERCISES[state.exIdx].type==="sustain"){
             // "Haciendo sonido" por el rms crudo (independiente de la calibración): así una voz
             // moderada o soplada (sin tono claro) no se confunde con silencio y no corta la rep.
-            var makingSound = s.voiced || res.rms>=0.012;
+            // Umbral 0.006 ≈ el nivel bajo el cual el termómetro ya marca "silencio"; tolera voz muy suave.
+            var makingSound = s.voiced || res.rms>=0.006;
             if(makingSound){
               state.lastSoundTs=ts;
               if(++state.soundFrames>=3) state.heardSound=true;   // ~200 ms de voz real: ignora clics/ruidos sueltos
