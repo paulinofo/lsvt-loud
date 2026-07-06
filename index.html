@@ -428,7 +428,9 @@ function startMic(cb){
           }
           // Sostenidos (AHHH): al dejar de vocalizar, cierra la repetición sola.
           if(EXERCISES[state.exIdx].type==="sustain"){
-            var makingSound = s.voiced || db>=70;
+            // "Haciendo sonido" por el rms crudo (independiente de la calibración): así una voz
+            // moderada o soplada (sin tono claro) no se confunde con silencio y no corta la rep.
+            var makingSound = s.voiced || res.rms>=0.012;
             if(makingSound){
               state.lastSoundTs=ts;
               if(++state.soundFrames>=3) state.heardSound=true;   // ~200 ms de voz real: ignora clics/ruidos sueltos
