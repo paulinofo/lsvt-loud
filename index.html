@@ -141,21 +141,21 @@ function loadSettings(){
     var s=JSON.parse(localStorage.getItem(LS_SET)||"{}");
     var hadCalib=s.calib!=null;
     var out={
-      calib: hadCalib ? s.calib : 114,   // nuevo default (micrófono sin AGC lee ~20 dB más bajo)
+      calib: hadCalib ? s.calib : 94,    // default corregido (114 inflaba ~20 dB: en iOS apagar el AGC no bajó el nivel)
       targetDb: s.targetDb!=null ? s.targetDb : 80,
       reps: s.reps||{}, targets: s.targets||{}, resetAt: s.resetAt||0,
       phrases: (Array.isArray(s.phrases)&&s.phrases.length)?s.phrases:null,
       carryDone: s.carryDone||"",
       myReading: (s.myReading&&s.myReading.texto)?s.myReading:null,
-      agcCal: !!s.agcCal
+      agcCal: !!s.agcCal, calFix: !!s.calFix
     };
-    // Migración única: al desactivar el procesamiento del micrófono el nivel bajó ~20 dB;
-    // sube la calibración de quienes ya tenían la app para seguir marcando igual que antes.
-    if(hadCalib && !out.agcCal) out.calib=clamp(out.calib+20, 70, 140);
-    out.agcCal=true;
-    if(!s.agcCal){ try{ localStorage.setItem(LS_SET, JSON.stringify(out)); }catch(e){} }
+    // Corrección única: la migración anterior sumó +20 asumiendo que apagar el AGC bajaba el nivel ~20 dB,
+    // pero iOS no lo respetó y el dB quedó inflado. Deshacer ese +20 solo para quien lo recibió (agcCal).
+    if(hadCalib && out.agcCal && !out.calFix) out.calib=clamp(out.calib-20, 70, 140);
+    out.agcCal=true; out.calFix=true;
+    if(!s.calFix){ try{ localStorage.setItem(LS_SET, JSON.stringify(out)); }catch(e){} }
     return out;
-  }catch(e){ return {calib:114,targetDb:80,reps:{},targets:{},resetAt:0,phrases:null,carryDone:"",myReading:null,agcCal:true}; }
+  }catch(e){ return {calib:94,targetDb:80,reps:{},targets:{},resetAt:0,phrases:null,carryDone:"",myReading:null,agcCal:true,calFix:true}; }
 }
 function saveSettings(s){ try{ localStorage.setItem(LS_SET, JSON.stringify(s)); }catch(e){} }
 
@@ -1029,7 +1029,8 @@ function SustainScreen(){
   var pno=buildPiano(am, 104);
   pWrap.appendChild(pno.node);
   body.appendChild(pWrap);
-  _liveNodes.pianoKeys=pno.keys; _liveNodes.pianoActive=am;
+  _liveNodes.pianoKeys=pno.keys; _liveNodes.pianoActive=am; _liveNodes.pianoScroller=pno.node;
+  if(am!=null) requestAnimationFrame(function(){ if(pno.keys[am]) centerPianoKey(pno.node, pno.keys[am].btn); });
 
   // Cue de conciencia sensorial tras la repetición (protocolo: anclar la sensación del esfuerzo)
   if(!state.running && state.lastRep){
@@ -1124,6 +1125,7 @@ function updateLiveDOM(){
       if(_liveNodes.pianoActive!=null && pk[_liveNodes.pianoActive]) setKeyActive(pk[_liveNodes.pianoActive],_liveNodes.pianoActive,false);
       if(am2!=null && pk[am2]) setKeyActive(pk[am2],am2,true);
       _liveNodes.pianoActive=am2;
+      if(am2!=null && pk[am2]) centerPianoKey(_liveNodes.pianoScroller, pk[am2].btn);   // sigue el tono: nota al centro
     }
   }
 }
@@ -1731,6 +1733,18 @@ function buildPiano(activeMidi, whiteH){
   scroller.appendChild(kb);
   return {node:scroller, keys:keys};
 }
+// Desplaza el piano horizontalmente para dejar la tecla detectada más o menos al centro.
+function centerPianoKey(scroller, keyBtn){
+  if(!scroller || !keyBtn) return;
+  try{
+    var kr=keyBtn.getBoundingClientRect(), sr=scroller.getBoundingClientRect();
+    if(!sr.width) return;                       // aún no está en el layout
+    var target=scroller.scrollLeft + (kr.left+kr.width/2) - (sr.left+sr.width/2);
+    target=Math.max(0, Math.min(target, scroller.scrollWidth-scroller.clientWidth));
+    if(scroller.scrollTo){ scroller.scrollTo({left:target, behavior:"smooth"}); }
+    else { scroller.scrollLeft=target; }
+  }catch(e){}
+}
 
 /* ─────────── Medidor / Piano ─────────── */
 function TunerScreen(){
@@ -1791,8 +1805,9 @@ function TunerScreen(){
   var piano=buildPiano(activeMidi, 138);
   var pianoKeys=piano.keys;
   pianoWrap.appendChild(piano.node);
+  if(activeMidi!=null) requestAnimationFrame(function(){ if(piano.keys[activeMidi]) centerPianoKey(piano.node, piano.keys[activeMidi].btn); });
 
-  _tunerNodes={volCard:volCard,volNum:volNum,volLabel:volLabel,noteNum:noteNum,noteFreq:noteFreq,barFill:barFill,keys:pianoKeys,activeMidi:activeMidi};
+  _tunerNodes={volCard:volCard,volNum:volNum,volLabel:volLabel,noteNum:noteNum,noteFreq:noteFreq,barFill:barFill,keys:pianoKeys,scroller:piano.node,activeMidi:activeMidi};
 
   var guide=el("div",{style:"display:flex;gap:8px;justify-content:center;padding:10px 16px 0;flex-wrap:wrap;"});
   [["🔉 Grave","DO2 – SOL2","#2e7d32"],["🗣️ Habla","LA2 – MI3","#0d47a1"],["📢 Agudo","SOL3 +","#6a1b9a"]].forEach(function(g){
@@ -1830,6 +1845,7 @@ function updateTunerDOM(){
     if(prev!=null && keys[prev]){ setKeyActive(keys[prev],prev,false); }
     if(activeMidi!=null && keys[activeMidi]){ setKeyActive(keys[activeMidi],activeMidi,true); }
     _tunerNodes.activeMidi=activeMidi;
+    if(activeMidi!=null && keys[activeMidi]) centerPianoKey(_tunerNodes.scroller, keys[activeMidi].btn);   // nota al centro
   }
 }
 function setKeyActive(k,midi,on){
