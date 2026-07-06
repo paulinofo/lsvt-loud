@@ -280,7 +280,6 @@ var state = {
   audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
   noteBuf:[], voidFrames:0,
   history:[], repSamples:{db:[],hz:[],zin:0,ztot:0},
-  heardSound:false, soundFrames:0, lastSoundTs:0,   // fin automático del sostenido: voz detectada / última trama con sonido
   zoneNow:null, targetNow:null,          // metas personalizadas del ejercicio abierto
   convTopic:null, convStats:null, editReading:false, lastRep:null
 };
@@ -338,8 +337,6 @@ function autoCorrelate(buf, sr){
   if(freq<50||freq>1200) return {freq:-1,rms:rms};
   return {freq:freq,rms:rms};
 }
-// Fin automático del sostenido: silencio continuo (ms) tras haber vocalizado que cierra la repetición.
-var AUTO_END_SILENCE_MS=1300;
 function startMic(cb){
   state.micError=null;
   // iOS CRÍTICO: crear y reanudar el AudioContext SÍNCRONAMENTE dentro del gesto (toque),
@@ -426,20 +423,8 @@ function startMic(cb){
             var ez=state.zoneNow||EXERCISES[state.exIdx].zone;
             if(ez){ state.repSamples.ztot++; if(inZone(s.mf,ez)) state.repSamples.zin++; }
           }
-          // Sostenidos (AHHH): al dejar de vocalizar, cierra la repetición sola.
-          if(EXERCISES[state.exIdx].type==="sustain"){
-            // "Haciendo sonido" por el rms crudo (independiente de la calibración): así una voz
-            // moderada o soplada (sin tono claro) no se confunde con silencio y no corta la rep.
-            // Umbral 0.006 ≈ el nivel bajo el cual el termómetro ya marca "silencio"; tolera voz muy suave.
-            var makingSound = s.voiced || res.rms>=0.006;
-            if(makingSound){
-              state.lastSoundTs=ts;
-              if(++state.soundFrames>=3) state.heardSound=true;   // ~200 ms de voz real: ignora clics/ruidos sueltos
-            } else {
-              state.soundFrames=0;
-              if(state.heardSound && (ts-state.lastSoundTs)>=AUTO_END_SILENCE_MS){ repDone(); }
-            }
-          }
+          // NOTA: la repetición NO se cierra por silencio (una voz débil que baja se confundía con
+          // "callar" y cortaba antes de tiempo). Solo cierra por la meta de tiempo o el botón ✓ LISTO.
         }
         updateLive();
       }
@@ -694,7 +679,6 @@ function tickStart(){
   if(!state.micOn){ startMic(function(){}); }
   state.sec=0; state.running=true;
   state.repSamples={db:[],hz:[],zin:0,ztot:0}; state.history=[];
-  state.heardSound=false; state.soundFrames=0; state.lastSoundTs=0;   // arma de nuevo el fin automático por silencio
   startRepTimer();
   render();
 }
@@ -1067,7 +1051,7 @@ function SustainScreen(){
     foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  SIGUIENTE REP", BIG_BTN+"background:"+ex.color+";", tickStart));
   } else {
     var hit=state.targetNow!=null && state.sec>=state.targetNow;
-    foot.appendChild(el("div",{style:"font-size:12px;color:#5a6899;text-align:center;margin-bottom:9px;line-height:1.5;"},"Al llegar a la meta o al dejar de vocalizar, pasa sola a la siguiente"));
+    foot.appendChild(el("div",{style:"font-size:12px;color:#5a6899;text-align:center;margin-bottom:9px;line-height:1.5;"},"Al llegar a la meta pasa sola a la siguiente · o toca ✓ LISTO"));
     foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:"+(hit?"#2e7d32":"#5a6899")+";border:2px solid "+(hit?"#2e7d32":"rgba(26,35,126,0.11)")+";", repDone));
   }
   wrap.appendChild(foot);
