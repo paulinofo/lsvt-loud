@@ -85,6 +85,17 @@ var SENSE_CUES=[
   "Recuerda esta sensación y úsala hoy al hablar con los demás.",
   "Si se siente exagerado, va perfecto: así suena normal a los demás."
 ];
+/* Frases cortas de ánimo cuando NO se alcanzó la meta (cerraste antes con ✓ LISTO). */
+var MOTIVATE_CUES=[
+  "¡Casi! La próxima aguanta un poquito más.",
+  "Respira hondo y vuelve con más fuerza.",
+  "Cada día un segundito más. ¡Tú puedes!",
+  "Un poco más de aire y llegas a la meta.",
+  "Vas bien. No te rindas, ¡otra vez!",
+  "Empuja un poquito más, lo tienes.",
+  "Fuerza y calma: la próxima es tuya.",
+  "Ánimo, cada intento te hace más fuerte."
+];
 
 /* ─────────── Lecturas del día (autores verificados, dominio público — fuente: es.wikisource.org) ───────────
    Rotan con la fecha: una lectura distinta cada día. ~500-600 palabras ≈ 5 min en voz alta. */
@@ -648,15 +659,23 @@ function startPhraseGap(){
 }
 function gapOverlay(){
   var ex=EXERCISES[state.exIdx], sustain=(ex.type==="sustain");
-  var col=sustain?ex.color:"#e65100";
-  var titulo=sustain?"Vas muy bien":"Cambia de frase";
-  var pie=sustain?"Respira. La siguiente repetición empieza sola.":"Respira. La siguiente frase empieza sola.";
+  var emoji, titulo, cue, col, pie;
+  if(sustain){
+    if(state.lastRepHitMeta){   // llegó a la meta → felicita
+      emoji="👏"; titulo="¡Meta cumplida!"; col=ex.color; cue=SENSE_CUES[state.rep%SENSE_CUES.length];
+    } else {                    // cerró antes de la meta → anima a mejorar
+      emoji="💪"; titulo="¡Un poco más!"; col="#e65100"; cue=MOTIVATE_CUES[state.rep%MOTIVATE_CUES.length];
+    }
+    pie="Respira. La siguiente repetición empieza sola.";
+  } else {
+    emoji="👏"; titulo="Cambia de frase"; col="#e65100"; cue=SENSE_CUES[state.rep%SENSE_CUES.length]; pie="Respira. La siguiente frase empieza sola.";
+  }
   var ov=el("div",{style:"position:fixed;inset:0;z-index:55;background:rgba(238,241,250,0.95);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
-  ov.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;",class:"card"},"👏"));
+  ov.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;",class:"card"},emoji));
   ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:4px;color:"+col+";text-transform:uppercase;margin-bottom:8px;font-weight:800;"},titulo));
   var n=el("div",{style:"font-size:76px;font-weight:900;letter-spacing:-2px;color:"+col+";line-height:1;margin:6px 0 12px;"},String(state.gap||3));
   _gapNode=n; ov.appendChild(n);
-  ov.appendChild(el("div",{style:"font-size:14px;color:#5a6899;line-height:1.6;"},SENSE_CUES[state.rep%SENSE_CUES.length]));
+  ov.appendChild(el("div",{style:"font-size:14px;color:#5a6899;line-height:1.6;"},cue));
   ov.appendChild(el("div",{style:"margin-top:6px;font-size:12px;color:#93a0c8;"},pie));
   return ov;
 }
@@ -741,7 +760,8 @@ function repDone(){
     if(state.rep+1 === 2*perCycle){ startWaterBreak(); }   // acaba de completar el 2º ciclo (frase 20)
     else { startPhraseGap(); }                             // 3s y avanza sola
   } else {
-    // Sostenidos: cue de conciencia sensorial (protocolo) + pausa de 3s y avance manos libres a la siguiente.
+    // Sostenidos: ¿alcanzó la meta de tiempo? felicita; si no (cerró con ✓ LISTO antes), anima a mejorar.
+    state.lastRepHitMeta = (state.targetNow!=null && state.sec>=state.targetNow);
     state.lastRep={sec:state.sec, db:audio?audio.maxDb:null, cue:SENSE_CUES[state.rep%SENSE_CUES.length]};
     startPhraseGap();   // 3s de descanso y arranca sola la siguiente rep (phraseNext: rep++, sec=0, tickStart)
   }
