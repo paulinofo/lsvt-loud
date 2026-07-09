@@ -277,7 +277,7 @@ function computeStreak(log){
 
 /* ─────────── Estado global ─────────── */
 var state = {
-  screen:"home", exIdx:0, rep:0, phraseIdx:0, sec:0, running:false,
+  screen:"home", exIdx:0, rep:0, phraseIdx:0, sec:0, running:false, waitingVoice:false,
   repLog:[], dbLog:[], done:{}, log:loadLog(), settings:loadSettings(),
   sessionId:null,
   timer:null,
@@ -428,6 +428,10 @@ function startMic(cb){
         state.history.push({db:db, mf:mf});
         if(state.history.length>110) state.history.shift();
         if(state.running && !state.paused){
+          // Sostenidos: el reloj arranca con la primera voz (la inhalación previa no cuenta).
+          if(state.waitingVoice && (s.voiced || res.rms>=0.012)){
+            state.waitingVoice=false; startRepTimer(); updateTimer();
+          }
           if(db>=55) state.repSamples.db.push(db);
           if(s.voiced && s.freq>0){
             state.repSamples.hz.push(s.freq);
@@ -632,7 +636,7 @@ function resumeSession(){
   state.paused=false;
   if(state.restTimer){ clearInterval(state.restTimer); state.restTimer=null; }
   if(state.waterAuto){ state.waterAuto=false; phraseNext(); return; }  // pausa de agua de frases → continúa solo
-  if(state.running){   // si estaba corriendo una rep, reanuda el cronómetro donde quedó
+  if(state.running && !state.waitingVoice){   // si estaba corriendo una rep, reanuda el cronómetro donde quedó
     startRepTimer();
   }
   render();
@@ -695,10 +699,19 @@ function pauseOverlay(){
 /* ─────────── Cronómetro ─────────── */
 function tickStart(){
   // Pedir micrófono PRIMERO, aún dentro del gesto del toque (clave en iOS).
-  if(!state.micOn){ startMic(function(){}); }
+  if(!state.micOn){ startMic(function(ok){
+    // Si el micrófono falla, el reloj arranca de inmediato (no hay voz que esperar).
+    if(!ok && state.running && state.waitingVoice){ state.waitingVoice=false; startRepTimer(); updateTimer(); }
+  }); }
   state.sec=0; state.running=true;
   state.repSamples={db:[],hz:[],zin:0,ztot:0}; state.history=[];
-  startRepTimer();
+  // Sostenidos: el reloj arranca al oír la voz (la inhalación previa no cuenta).
+  state.waitingVoice = EXERCISES[state.exIdx].type==="sustain" && !state.micError;
+  if(!state.waitingVoice){ startRepTimer(); }
+  else {
+    // Red de seguridad: si el micrófono no llega a conectar (p.ej. permiso colgado), arranca solo.
+    setTimeout(function(){ if(state.running && state.waitingVoice && !state.micOn){ state.waitingVoice=false; startRepTimer(); updateTimer(); } }, 4000);
+  }
   render();
 }
 // Cronómetro basado en la hora real: no deriva si iOS congela los intervalos en segundo plano.
@@ -880,11 +893,16 @@ function thermometerSVG(db, targetDb, micOn, running){
     return '<rect x="'+(tx0+2)+'" y="'+yy+'" width="'+(TW-4)+'" height="'+hh+'" fill="'+color+'" opacity="'+op+'"/>';
   }
   var t=pct(targetDb);
+  // Zona de trabajo fija 60–95 dB: blanco debajo, verde la zona, rojo difuminado arriba.
+  var z0=pct(60), z1=pct(95);
+  svg+='<defs><linearGradient id="redFade" x1="0" y1="1" x2="0" y2="0">'
+     +'<stop offset="0%" stop-color="#c62828" stop-opacity="0.10"/>'
+     +'<stop offset="100%" stop-color="#c62828" stop-opacity="0.45"/></linearGradient></defs>';
   svg+='<clipPath id="tube"><rect x="'+(tx0+2)+'" y="'+(ty0+2)+'" width="'+(TW-4)+'" height="'+(ty1-ty0-4)+'" rx="'+(r-2)+'"/></clipPath>';
   svg+='<g clip-path="url(#tube)">';
-  svg+=bandRect(0,t,"#e65100",0.16);
-  svg+=bandRect(t,pct(targetDb+15),"#2e7d32",0.20);
-  svg+=bandRect(pct(targetDb+15),1,"#6a1b9a",0.16);
+  svg+=bandRect(0,z0,"#ffffff",1);
+  svg+=bandRect(z0,z1,"#2e7d32",0.20);
+  svg+=bandRect(z1,1,"url(#redFade)",1);
   // fill
   if(fill>0){
     svg+='<rect x="'+(tx0+2)+'" y="'+y(fill)+'" width="'+(TW-4)+'" height="'+(y(0)-y(fill))+'" fill="'+zone.color+'" opacity="0.85"/>';
@@ -894,7 +912,7 @@ function thermometerSVG(db, targetDb, micOn, running){
   // meta dashed line
   svg+='<line x1="'+(tx0-6)+'" y1="'+y(t)+'" x2="'+(tx1+6)+'" y2="'+y(t)+'" stroke="#0a0a0a" stroke-width="2.5" stroke-dasharray="5 4" opacity="0.85"/>';
   // ticks
-  [60,80,100].forEach(function(gv){
+  [60,80,95].forEach(function(gv){
     svg+='<text x="'+(tx1-2)+'" y="'+(y(pct(gv))+3)+'" font-size="8.5" font-weight="800" fill="rgba(26,35,126,0.55)" text-anchor="end">'+gv+'</text>';
   });
   svg+='</svg>';
@@ -1118,7 +1136,7 @@ function updateLiveDOM(){
   var hit=hasTarget && state.sec>=state.targetNow;
   _liveNodes.timerEl.textContent=fmtTime(state.sec);
   _liveNodes.timerEl.style.color=hit?"#2e7d32":state.running?"#0a0a0a":"#c7cee6";
-  _liveNodes.metaLine.textContent=hasTarget?(hit?"✓ META DE TIEMPO":("META: "+state.targetNow+"s · "+td+" dB")):("OBJETIVO: "+td+" dB · mide tu volumen");
+  _liveNodes.metaLine.textContent=(state.running&&state.waitingVoice)?"🎤 EL RELOJ ARRANCA CON TU VOZ":hasTarget?(hit?"✓ META DE TIEMPO":("META: "+state.targetNow+"s · "+td+" dB")):("OBJETIVO: "+td+" dB · mide tu volumen");
   _liveNodes.metaLine.style.color=hit?"#2e7d32":"#93a0c8";
   if(_liveNodes.graph && state.micOn){
     _liveNodes.graph.innerHTML="";
@@ -1136,7 +1154,7 @@ function updateLiveDOM(){
     }
   }
 }
-function updateTimer(){ if(_liveNodes.timerEl){ var hasTarget=state.targetNow!=null; var hit=hasTarget&&state.sec>=state.targetNow; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#2e7d32":state.running?"#0a0a0a":"#c7cee6"; _liveNodes.metaLine.textContent=hasTarget?(hit?"✓ META DE TIEMPO":("META: "+state.targetNow+"s · "+state.settings.targetDb+" dB")):("OBJETIVO: "+state.settings.targetDb+" dB · mide tu volumen"); _liveNodes.metaLine.style.color=hit?"#2e7d32":"#93a0c8"; } }
+function updateTimer(){ if(_liveNodes.timerEl){ var hasTarget=state.targetNow!=null; var hit=hasTarget&&state.sec>=state.targetNow; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#2e7d32":state.running?"#0a0a0a":"#c7cee6"; _liveNodes.metaLine.textContent=(state.running&&state.waitingVoice)?"🎤 EL RELOJ ARRANCA CON TU VOZ":hasTarget?(hit?"✓ META DE TIEMPO":("META: "+state.targetNow+"s · "+state.settings.targetDb+" dB")):("OBJETIVO: "+state.settings.targetDb+" dB · mide tu volumen"); _liveNodes.metaLine.style.color=hit?"#2e7d32":"#93a0c8"; } }
 
 /* ─────────── Frases ─────────── */
 function PhraseScreen(){
@@ -1708,7 +1726,7 @@ function HistoryScreen(){
 
 /* ─────────── Piano reutilizable (blanco y negro) ─────────── */
 // Teclas blancas/negras clásicas. La nota activa se resalta en gris (sin color).
-var PIANO_W_BASE="#FFFFFF", PIANO_W_ACT="#1f2430", PIANO_B_BASE="#111418", PIANO_B_ACT="#8a92a3";
+var PIANO_W_BASE="#FFFFFF", PIANO_W_ACT="#b9f6ca", PIANO_B_BASE="#111418", PIANO_B_ACT="#69f0ae";   // tecla activa: verde claro
 function buildPiano(activeMidi, whiteH){
   whiteH=whiteH||138; var blackH=Math.round(whiteH*0.62);
   var keys={};
@@ -1722,7 +1740,7 @@ function buildPiano(activeMidi, whiteH){
     var isDO=(m%12===0);
     var container=el("div",{style:"position:relative;"});
     (function(mm){
-      var whiteSpan=el("span",{style:"font-size:8.5px;font-weight:800;color:"+(isActive?"#fff":isDO?"#333":"#8a92a3")+";"}, (isDO||isActive)?midiName(mm):"");
+      var whiteSpan=el("span",{style:"font-size:8.5px;font-weight:800;color:"+(isActive?"#1b5e20":isDO?"#333":"#8a92a3")+";"}, (isDO||isActive)?midiName(mm):"");
       var white=btn(whiteSpan,
         "width:"+WHITE_W+"px;height:"+whiteH+"px;background:"+(isActive?PIANO_W_ACT:PIANO_W_BASE)+";border:1px solid #333;border-radius:0 0 6px 6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;", function(){ playTone(mm); });
       container.appendChild(white);
@@ -1861,7 +1879,7 @@ function setKeyActive(k,midi,on){
   } else {
     k.btn.style.background=on?PIANO_W_ACT:PIANO_W_BASE;
     k.span.textContent=(k.isDO||on)?midiName(midi):"";
-    k.span.style.color=on?"#fff":k.isDO?"#333":"#8a92a3";
+    k.span.style.color=on?"#1b5e20":k.isDO?"#333":"#8a92a3";
   }
 }
 function cfgRow(label, value, onDec, onInc){
