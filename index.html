@@ -284,6 +284,7 @@ var state = {
   paused:false, restSec:0, restTimer:null, restT0:0,
   gap:0, gapTimer:null, gapEndAt:0, waterAuto:false,
   readSec:300, readTimer:null, readEndAt:0, readRunning:false, readText:null,
+  readProgress:0, readSoundTs:0, readAdvTs:0,   // lectura: avance del desvanecido guiado por la voz
   timerT0:0, wakeLock:null, editPhrases:false,
   recorder:null, recChunks:[], recBlob:null, recURL:null, recMime:"", recording:false, recStarted:false, recUnsupported:false,
   // audio
@@ -464,6 +465,16 @@ function startMic(cb){
             }
           }
         }
+        // LECTURA: mientras se oye la voz, desvanece lo ya leído (al ritmo del texto en 5 min de voz).
+        if(state.readRunning && EXERCISES[state.exIdx].type==="reading" && _readWords.total>0){
+          if(s.voiced || res.rms>=0.012) state.readSoundTs=ts;
+          if(state.readSoundTs && (ts-state.readSoundTs)<450){   // tolera pausas cortas entre palabras
+            state.readProgress=Math.min(_readWords.total, (state.readProgress||0) + _readWords.rate*((ts-(state.readAdvTs||ts))/1000));
+            var _upto=Math.floor(state.readProgress);
+            while(_readWords.faded<_upto){ _readWords.els[_readWords.faded].style.opacity=READ_FADE_OPACITY; _readWords.faded++; }
+          }
+          state.readAdvTs=ts;
+        }
         updateLive();
       }
       state.raf=requestAnimationFrame(loop);
@@ -617,7 +628,7 @@ var STAT_LBL="font-size:9.5px;letter-spacing:1.5px;color:#5a6899;text-transform:
 /* ─────────── Navegación ─────────── */
 function go(screen){ if(screen==="home"||screen==="history"){ if(state.micOn) stopMic(); } state.screen=screen; render(); }
 function openEx(i){
-  clearPause(); clearRead(); state.readSec=300;
+  clearPause(); clearRead(); state.readSec=300; state.readProgress=0; state.readSoundTs=0; state.readAdvTs=0;
   var ex=EXERCISES[i];
   if(ex.type==="reading") state.readText=state.settings.myReading||nextReading();
   if(ex.type==="conversation") state.convTopic=nextTopic();
@@ -1378,6 +1389,9 @@ function PhraseEditScreen(ex){
 
 /* ─────────── Lectura ─────────── */
 var _readNode=null;
+// Palabras del texto de lectura (spans) para ir desvaneciendo lo ya leído mientras se oye la voz.
+var _readWords={els:[],total:0,rate:0,faded:0};
+var READ_FADE_OPACITY="0.18";
 // Lectura del día: rota con la fecha del calendario (cada día toca un autor/texto distinto).
 function nextReading(){
   var d=new Date();
@@ -1389,6 +1403,7 @@ function readStart(){
   releaseRec();
   function begin(){
     state.readRunning=true;
+    state.readProgress=0; state.readSoundTs=0; state.readAdvTs=0;   // reinicia el desvanecido de lo leído
     // Conversación: durante la charla se miden dB (state.running activa la captura del bucle de audio)
     if(EXERCISES[state.exIdx].type==="conversation"){ state.running=true; state.repSamples={db:[],hz:[],zin:0,ztot:0}; }
     state.readEndAt=Date.now()+state.readSec*1000;
@@ -1509,9 +1524,24 @@ function ReadScreen(){
   var carta=el("div",{style:"background:#ffffff;border-radius:20px;border:1.5px solid "+ex.color+"30;padding:22px 22px;"});
   carta.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";text-transform:uppercase;font-weight:800;margin-bottom:"+(lect.autor?"3":"12")+"px;text-align:center;"},lect.titulo));
   if(lect.autor) carta.appendChild(el("div",{style:"font-size:12px;color:#93a0c8;margin-bottom:12px;text-align:center;font-style:italic;"},"— "+lect.autor+(lect.fuente?" · "+lect.fuente:"")));
+  // Texto palabra por palabra (spans): mientras lees, lo ya leído se va desvaneciendo.
+  _readWords.els=[]; _readWords.faded=0;
   lect.texto.split(/\n\n+/).forEach(function(p,i,arr){
-    carta.appendChild(el("div",{style:"font-size:19px;color:#0a0a0a;line-height:1.9;text-align:justify;"+(i<arr.length-1?"margin-bottom:16px;":"")},p));
+    var par=el("div",{style:"font-size:19px;color:#0a0a0a;line-height:1.9;text-align:justify;"+(i<arr.length-1?"margin-bottom:16px;":"")});
+    p.split(/\s+/).forEach(function(w){
+      if(!w) return;
+      var sp=el("span",{style:"transition:opacity .7s ease;"},w);
+      par.appendChild(sp); par.appendChild(document.createTextNode(" "));
+      _readWords.els.push(sp);
+    });
+    carta.appendChild(par);
   });
+  _readWords.total=_readWords.els.length;
+  _readWords.rate=_readWords.total/300;   // palabras/seg para cubrir el texto en 5 min de lectura efectiva
+  // Re-aplica el avance ya leído (los re-render reconstruyen los spans)
+  var _already=Math.min(Math.floor(state.readProgress||0), _readWords.total);
+  for(var _k=0;_k<_already;_k++){ _readWords.els[_k].style.opacity=READ_FADE_OPACITY; }
+  _readWords.faded=_already;
   carta.appendChild(el("div",{style:"margin-top:16px;font-size:13px;color:#93a0c8;text-align:center;line-height:1.5;font-style:italic;"},"¿Terminaste antes de tiempo? Vuelve al inicio y léelo otra vez, aún MÁS FUERTE."));
   body.appendChild(carta);
   body.appendChild(el("div",{style:"margin-top:14px;font-size:13px;color:#5a6899;text-align:center;line-height:1.7;"},ex.instruction));
