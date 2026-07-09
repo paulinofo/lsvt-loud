@@ -30,7 +30,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v26";
+var APP_VER="v27";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -161,6 +161,7 @@ function loadSettings(){
       phrases: (Array.isArray(s.phrases)&&s.phrases.length)?s.phrases:null,
       carryDone: s.carryDone||"",
       myReading: (s.myReading&&s.myReading.texto)?s.myReading:null,
+      readWpm: s.readWpm||160,   // ritmo del guía de lectura (palabras/min de habla efectiva), ajustable
       agcCal: !!s.agcCal, calFix: !!s.calFix
     };
     // Corrección única: la migración anterior sumó +20 asumiendo que apagar el AGC bajaba el nivel ~20 dB,
@@ -169,7 +170,7 @@ function loadSettings(){
     out.agcCal=true; out.calFix=true;
     if(!s.calFix){ try{ localStorage.setItem(LS_SET, JSON.stringify(out)); }catch(e){} }
     return out;
-  }catch(e){ return {calib:94,targetDb:80,reps:{},targets:{},resetAt:0,phrases:null,carryDone:"",myReading:null,agcCal:true,calFix:true}; }
+  }catch(e){ return {calib:94,targetDb:80,reps:{},targets:{},resetAt:0,phrases:null,carryDone:"",myReading:null,readWpm:160,agcCal:true,calFix:true}; }
 }
 function saveSettings(s){ try{ localStorage.setItem(LS_SET, JSON.stringify(s)); }catch(e){} }
 
@@ -1426,6 +1427,12 @@ function PhraseEditScreen(ex){
 var _readNode=null, _readDbNode=null;
 // Palabras del texto de lectura (spans) para ir desvaneciendo lo ya leído mientras se oye la voz.
 var _readWords={els:[],total:0,rate:0,faded:0};
+// Aplica el desvanecido según state.readProgress, en ambas direcciones (sirve para re-sincronizar).
+function applyReadFade(){
+  var upto=Math.min(Math.floor(state.readProgress||0), _readWords.total);
+  for(var k=0;k<_readWords.total;k++){ _readWords.els[k].style.opacity = (k<upto) ? READ_FADE_OPACITY : "1"; }
+  _readWords.faded=upto;
+}
 // Indicador en vivo de la lectura: dB y si la app está oyendo la voz (diagnóstico visible).
 function updateReadDOM(){
   if(!_readDbNode) return;
@@ -1569,6 +1576,23 @@ function ReadScreen(){
     _readDbNode=rdb; tbox.appendChild(rdb);
   }
   else if(done) tbox.appendChild(el("div",{style:"margin-top:8px;font-size:14px;color:#2e7d32;font-weight:900;"},"✓ ¡Tiempo completado!"));
+  // Ritmo del guía de lectura: ajustable en cualquier momento, con botones grandes (se guarda).
+  if(!done){
+    var pbs="width:42px;height:42px;border-radius:12px;border:1px solid rgba(26,35,126,0.17);background:rgba(26,35,126,0.08);color:#0a0a0a;font-size:22px;font-weight:800;line-height:1;flex-shrink:0;";
+    var paceLbl=el("div",{style:"min-width:150px;text-align:center;font-size:12px;font-weight:800;color:#5a6899;letter-spacing:0.5px;"},"GUÍA: "+(state.settings.readWpm||160)+" palabras/min");
+    function setWpm(d){
+      state.settings.readWpm=clamp((state.settings.readWpm||160)+d,60,260);
+      saveSettings(state.settings);
+      _readWords.rate=state.settings.readWpm/60;
+      paceLbl.textContent="GUÍA: "+state.settings.readWpm+" palabras/min";
+    }
+    var paceRow=el("div",{style:"display:flex;align-items:center;justify-content:center;gap:12px;margin-top:8px;"});
+    paceRow.appendChild(btn("−",pbs,function(){ setWpm(-20); }));
+    paceRow.appendChild(paceLbl);
+    paceRow.appendChild(btn("+",pbs,function(){ setWpm(20); }));
+    tbox.appendChild(paceRow);
+    if(running) tbox.appendChild(el("div",{style:"margin-top:5px;font-size:11px;color:#93a0c8;"},"Si el guía no va contigo: ajústalo con − / + o toca el párrafo donde vas"));
+  }
   wrap.appendChild(tbox);
 
   var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:0 20px;"});
@@ -1582,23 +1606,23 @@ function ReadScreen(){
   carta.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";text-transform:uppercase;font-weight:800;margin-bottom:"+(lect.autor?"3":"12")+"px;text-align:center;"},lect.titulo));
   if(lect.autor) carta.appendChild(el("div",{style:"font-size:12px;color:#93a0c8;margin-bottom:12px;text-align:center;font-style:italic;"},"— "+lect.autor+(lect.fuente?" · "+lect.fuente:"")));
   // Texto palabra por palabra (spans): mientras lees, lo ya leído se va desvaneciendo.
+  // Tocar un párrafo pone el guía justo ahí (objetivo grande: fácil de tocar aun con temblor).
   _readWords.els=[]; _readWords.faded=0;
   lect.texto.split(/\n\n+/).forEach(function(p,i,arr){
     var par=el("div",{style:"font-size:19px;color:#0a0a0a;line-height:1.9;text-align:justify;"+(i<arr.length-1?"margin-bottom:16px;":"")});
+    var offset=_readWords.els.length;
     p.split(/\s+/).forEach(function(w){
       if(!w) return;
       var sp=el("span",{style:"transition:opacity .7s ease;"},w);
       par.appendChild(sp); par.appendChild(document.createTextNode(" "));
       _readWords.els.push(sp);
     });
+    par.addEventListener("click",function(){ if(state.readRunning){ state.readProgress=offset; applyReadFade(); } });
     carta.appendChild(par);
   });
   _readWords.total=_readWords.els.length;
-  _readWords.rate=_readWords.total/300;   // palabras/seg para cubrir el texto en 5 min de lectura efectiva
-  // Re-aplica el avance ya leído (los re-render reconstruyen los spans)
-  var _already=Math.min(Math.floor(state.readProgress||0), _readWords.total);
-  for(var _k=0;_k<_already;_k++){ _readWords.els[_k].style.opacity=READ_FADE_OPACITY; }
-  _readWords.faded=_already;
+  _readWords.rate=(state.settings.readWpm||160)/60;   // ritmo del guía ajustable (palabras/min de habla)
+  applyReadFade();   // re-aplica el avance ya leído (los re-render reconstruyen los spans)
   carta.appendChild(el("div",{style:"margin-top:16px;font-size:13px;color:#93a0c8;text-align:center;line-height:1.5;font-style:italic;"},"¿Terminaste antes de tiempo? Vuelve al inicio y léelo otra vez, aún MÁS FUERTE."));
   body.appendChild(carta);
   body.appendChild(el("div",{style:"margin-top:14px;font-size:13px;color:#5a6899;text-align:center;line-height:1.7;"},ex.instruction));
