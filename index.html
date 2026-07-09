@@ -29,6 +29,9 @@
 <script>
 "use strict";
 
+// Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
+var APP_VER="v24";
+
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
   { id:0, name:"TONO NORMAL", label:"Ejercicio 1 · Voz cómoda", vowel:"AHHH",
@@ -289,7 +292,7 @@ var state = {
   recorder:null, recChunks:[], recBlob:null, recURL:null, recMime:"", recording:false, recStarted:false, recUnsupported:false,
   // audio
   micOn:false, micError:null, reading:null,
-  audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
+  audioCtx:null, stream:null, analyser:null, srcNode:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
   noteBuf:[], voidFrames:0,
   history:[], repSamples:{db:[],hz:[],zin:0,ztot:0},
   heardSound:false, soundFrames:0, lastSoundTs:0, lastPhrase:null,   // frases: fin por silencio + calificación
@@ -389,7 +392,7 @@ function startMic(cb){
       var srcNode=ctx.createMediaStreamSource(stream);
       var analyser=ctx.createAnalyser(); analyser.fftSize=2048;
       srcNode.connect(analyser);
-      state.analyser=analyser; state.micOn=true;
+      state.analyser=analyser; state.srcNode=srcNode; state.micOn=true;
       var buf=new Float32Array(analyser.fftSize);
       var byteBuf=new Uint8Array(analyser.fftSize);
       var hasFloat=typeof analyser.getFloatTimeDomainData==="function";
@@ -503,6 +506,7 @@ function startMic(cb){
 function stopMic(){
   if(state.raf) cancelAnimationFrame(state.raf);
   if(state.stream){ state.stream.getTracks().forEach(function(t){ t.stop(); }); state.stream=null; }
+  state.srcNode=null;
   state.smoothF=0; state.smoothDb=0; state.micOn=false; state.reading=null;
   state.noteBuf.length=0; state.voidFrames=0;
   render();
@@ -957,7 +961,7 @@ function HomeScreen(){
 
   var foot=el("div",{style:"text-align:center;padding:6px 24px calc(env(safe-area-inset-bottom) + 8px);"});
   foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(26,35,126,0.11);border-radius:10px;padding:8px 22px;color:#5a6899;font-size:13px;", newSession));
-  foot.appendChild(el("div",{style:"margin-top:6px;font-size:8.5px;color:#93a0c8;line-height:1.5;"},"Complemento del tratamiento LSVT LOUD® con terapeuta certificado · requiere cuerdas vocales sanas (valoración ORL)"));
+  foot.appendChild(el("div",{style:"margin-top:6px;font-size:8.5px;color:#93a0c8;line-height:1.5;"},"Complemento del tratamiento LSVT LOUD® con terapeuta certificado · requiere cuerdas vocales sanas (valoración ORL) · "+APP_VER));
   wrap.appendChild(foot);
   return wrap;
 }
@@ -1186,7 +1190,7 @@ function SustainScreen(){
 
 // Actualización ligera durante mic (sin re-render completo)
 function updateLive(){
-  if(state.screen==="ex"){ var t=EXERCISES[state.exIdx].type; if(t==="sustain"||t==="phrases") updateLiveDOM(); else if(t==="conversation") updateConvDOM(); }
+  if(state.screen==="ex"){ var t=EXERCISES[state.exIdx].type; if(t==="sustain"||t==="phrases") updateLiveDOM(); else if(t==="conversation") updateConvDOM(); else if(t==="reading") updateReadDOM(); }
   else if(state.screen==="tuner") updateTunerDOM();
 }
 // Actualización ligera del medidor de la pantalla Conversación
@@ -1388,9 +1392,17 @@ function PhraseEditScreen(ex){
 }
 
 /* ─────────── Lectura ─────────── */
-var _readNode=null;
+var _readNode=null, _readDbNode=null;
 // Palabras del texto de lectura (spans) para ir desvaneciendo lo ya leído mientras se oye la voz.
 var _readWords={els:[],total:0,rate:0,faded:0};
+// Indicador en vivo de la lectura: dB y si la app está oyendo la voz (diagnóstico visible).
+function updateReadDOM(){
+  if(!_readDbNode) return;
+  var r=state.reading;
+  var speaking = state.readSoundTs && (performance.now()-state.readSoundTs)<450;
+  _readDbNode.textContent = (r&&r.db>=45 ? r.db+" dB" : "— dB") + (speaking ? " · 🎙️ te escucho" : " · 🤫 no oigo voz");
+  _readDbNode.style.color = speaking ? "#2e7d32" : "#93a0c8";
+}
 var READ_FADE_OPACITY="0.18";
 // Lectura del día: rota con la fecha del calendario (cada día toca un autor/texto distinto).
 function nextReading(){
@@ -1445,7 +1457,17 @@ function startReadRecording(){
     var opts={}, types=["audio/mp4","audio/webm;codecs=opus","audio/webm"];
     for(var i=0;i<types.length;i++){ if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(types[i])){ opts.mimeType=types[i]; break; } }
     state.recChunks=[];
-    state.recorder = opts.mimeType ? new MediaRecorder(state.stream, opts) : new MediaRecorder(state.stream);
+    // iOS: grabar desde el grafo de audio, NO del stream crudo — si el grabador y el analizador
+    // consumen el mismo stream, iOS silencia uno de los dos (y el seguimiento de voz muere).
+    var recStream=state.stream;
+    try{
+      if(state.audioCtx && state.srcNode && state.audioCtx.createMediaStreamDestination){
+        var dest=state.audioCtx.createMediaStreamDestination();
+        state.srcNode.connect(dest);
+        recStream=dest.stream;
+      }
+    }catch(e){}
+    state.recorder = opts.mimeType ? new MediaRecorder(recStream, opts) : new MediaRecorder(recStream);
     state.recMime = state.recorder.mimeType || opts.mimeType || "audio/webm";
     state.recorder.ondataavailable=function(e){ if(e.data && e.data.size>0) state.recChunks.push(e.data); };
     state.recorder.onstop=function(){
@@ -1510,7 +1532,11 @@ function ReadScreen(){
   var t=el("div",{style:"font-size:54px;font-weight:900;letter-spacing:-2px;line-height:1;color:"+timeColor+";"},fmtTime(state.readSec));
   _readNode=t; tbox.appendChild(t);
   if(!running && !state.recStarted) tbox.appendChild(btn("▶  Comenzar y grabar","margin-top:12px;border:none;border-radius:14px;padding:12px 30px;font-size:15px;font-weight:800;color:#fff;background:"+ex.color+";",readStart));
-  else if(running) tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#c62828;font-weight:800;"},(state.recording?"🔴 Grabando… ":"")+"¡mantén la voz FUERTE!"));
+  else if(running){
+    tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#c62828;font-weight:800;"},(state.recording?"🔴 Grabando… ":"")+"¡mantén la voz FUERTE!"));
+    var rdb=el("div",{style:"margin-top:4px;font-size:12px;font-weight:800;color:#93a0c8;"},"— dB");
+    _readDbNode=rdb; tbox.appendChild(rdb);
+  }
   else if(done) tbox.appendChild(el("div",{style:"margin-top:8px;font-size:14px;color:#2e7d32;font-weight:900;"},"✓ ¡Tiempo completado!"));
   wrap.appendChild(tbox);
 
