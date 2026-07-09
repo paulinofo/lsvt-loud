@@ -30,7 +30,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v24";
+var APP_VER="v25";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -292,7 +292,7 @@ var state = {
   recorder:null, recChunks:[], recBlob:null, recURL:null, recMime:"", recording:false, recStarted:false, recUnsupported:false,
   // audio
   micOn:false, micError:null, reading:null,
-  audioCtx:null, stream:null, analyser:null, srcNode:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
+  audioCtx:null, stream:null, analyser:null, srcNode:null, raf:null, micWatch:null, lastTs:0, smoothF:0, smoothDb:0,
   noteBuf:[], voidFrames:0,
   history:[], repSamples:{db:[],hz:[],zin:0,ztot:0},
   heardSound:false, soundFrames:0, lastSoundTs:0, lastPhrase:null,   // frases: fin por silencio + calificación
@@ -392,6 +392,9 @@ function startMic(cb){
       var srcNode=ctx.createMediaStreamSource(stream);
       var analyser=ctx.createAnalyser(); analyser.fftSize=2048;
       srcNode.connect(analyser);
+      // iOS keep-alive: una salida activa con ganancia 0 (inaudible, sin feedback) evita que iOS
+      // suspenda el contexto cuando cambia la sesión de audio (p.ej. al arrancar la grabación).
+      try{ var _ka=ctx.createGain(); _ka.gain.value=0; srcNode.connect(_ka); _ka.connect(ctx.destination); }catch(e){}
       state.analyser=analyser; state.srcNode=srcNode; state.micOn=true;
       var buf=new Float32Array(analyser.fftSize);
       var byteBuf=new Uint8Array(analyser.fftSize);
@@ -481,6 +484,22 @@ function startMic(cb){
         updateLive();
       }
       state.raf=requestAnimationFrame(loop);
+      // Vigilante iOS (cada 1s): si iOS suspende/interrumpe el contexto (p.ej. al arrancar la
+      // grabación) lo reanuda, y si el bucle de análisis muere lo vuelve a arrancar.
+      if(state.micWatch) clearInterval(state.micWatch);
+      state.micWatch=setInterval(function(){
+        if(!state.micOn){ clearInterval(state.micWatch); state.micWatch=null; return; }
+        try{ if(state.audioCtx && state.audioCtx.state!=="running") state.audioCtx.resume(); }catch(e){}
+        if(performance.now()-state.lastTs>2000){   // el bucle no corre hace >2s: re-armarlo
+          try{ if(state.raf) cancelAnimationFrame(state.raf); }catch(e){}
+          state.raf=requestAnimationFrame(loop);
+        }
+        // Diagnóstico visible en la lectura aunque el bucle esté muerto
+        if(_readDbNode && state.readRunning && performance.now()-state.lastTs>2000){
+          _readDbNode.textContent="⚠️ análisis de voz detenido — audio: "+(state.audioCtx?state.audioCtx.state:"—");
+          _readDbNode.style.color="#e65100";
+        }
+      }, 1000);
       render(); if(cb)cb(true);
     }catch(e){
       state.micError="Micrófono conectado pero falló el procesamiento de audio: "+(e.message||e)+".";
@@ -505,6 +524,7 @@ function startMic(cb){
 }
 function stopMic(){
   if(state.raf) cancelAnimationFrame(state.raf);
+  if(state.micWatch){ clearInterval(state.micWatch); state.micWatch=null; }
   if(state.stream){ state.stream.getTracks().forEach(function(t){ t.stop(); }); state.stream=null; }
   state.srcNode=null;
   state.smoothF=0; state.smoothDb=0; state.micOn=false; state.reading=null;
@@ -1534,7 +1554,7 @@ function ReadScreen(){
   if(!running && !state.recStarted) tbox.appendChild(btn("▶  Comenzar y grabar","margin-top:12px;border:none;border-radius:14px;padding:12px 30px;font-size:15px;font-weight:800;color:#fff;background:"+ex.color+";",readStart));
   else if(running){
     tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#c62828;font-weight:800;"},(state.recording?"🔴 Grabando… ":"")+"¡mantén la voz FUERTE!"));
-    var rdb=el("div",{style:"margin-top:4px;font-size:12px;font-weight:800;color:#93a0c8;"},"— dB");
+    var rdb=el("div",{style:"margin-top:5px;font-size:13.5px;font-weight:800;color:#93a0c8;"},"— dB · esperando tu voz…");
     _readDbNode=rdb; tbox.appendChild(rdb);
   }
   else if(done) tbox.appendChild(el("div",{style:"margin-top:8px;font-size:14px;color:#2e7d32;font-weight:900;"},"✓ ¡Tiempo completado!"));
