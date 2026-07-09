@@ -30,7 +30,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v25";
+var APP_VER="v26";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -296,7 +296,7 @@ var state = {
   noteBuf:[], voidFrames:0,
   history:[], repSamples:{db:[],hz:[],zin:0,ztot:0},
   heardSound:false, soundFrames:0, lastSoundTs:0, lastPhrase:null,   // frases: fin por silencio + calificación
-  noiseFloorRms:0, phrasePeakRms:0,   // ruido ambiente medido antes de la voz y pico de la voz (umbral adaptativo)
+  noiseFloorRms:0, phrasePeakRms:0, floorRms:0,   // pisos de ruido (por rep y global) y pico de voz — detección relativa
   cycleOk:0, cycleN:0, cycleSummary:null,   // frases: conteo de la ronda de 10 y su calificación 0–10
   zoneNow:null, targetNow:null,          // metas personalizadas del ejercicio abierto
   convTopic:null, convStats:null, editReading:false, lastRep:null
@@ -336,7 +336,7 @@ function autoCorrelate(buf, sr){
   var SIZE=buf.length, rms=0, i, j;
   for(i=0;i<SIZE;i++) rms+=buf[i]*buf[i];
   rms=Math.sqrt(rms/SIZE);
-  if(rms<0.012) return {freq:-1,rms:rms};
+  if(rms<0.003) return {freq:-1,rms:rms};   // puerta mínima baja: la validación real de "voz" es relativa al piso de ruido (voiceGate)
   var r1=0, r2=SIZE-1, thres=0.2;
   for(i=0;i<SIZE/2;i++){ if(Math.abs(buf[i])<thres){ r1=i; break; } }
   for(i=1;i<SIZE/2;i++){ if(Math.abs(buf[SIZE-i])<thres){ r2=SIZE-i; break; } }
@@ -348,11 +348,14 @@ function autoCorrelate(buf, sr){
   var maxval=-1, maxpos=-1;
   for(i=d;i<N;i++){ if(c[i]>maxval){ maxval=c[i]; maxpos=i; } }
   if(maxpos<=0) return {freq:-1,rms:rms};
+  // Calidad del pico: la voz real correlaciona fuerte (~0.6–0.9 del máximo teórico c[0]);
+  // el ruido produce picos aleatorios débiles (<0.3) que NO deben contar como tono.
+  if(c[0]<=0 || maxval/c[0]<0.45) return {freq:-1,rms:rms};
   var T0=maxpos, x1=c[T0-1]||0, x2=c[T0], x3=c[T0+1]||0;
   var a=(x1+x3-2*x2)/2, bb=(x3-x1)/2;
   if(a) T0=T0-bb/(2*a);
   var freq=sr/T0;
-  if(freq<50||freq>1200) return {freq:-1,rms:rms};
+  if(freq<65||freq>1200) return {freq:-1,rms:rms};   // <65 Hz: fuera el zumbido eléctrico (60 Hz); DO2=65.4 Hz sigue dentro
   return {freq:freq,rms:rms};
 }
 function startMic(cb){
@@ -410,8 +413,16 @@ function startMic(cb){
         var dbRaw = clamp(dbfs+state.settings.calib, 30, 115);
         state.smoothDb = state.smoothDb>0 ? state.smoothDb*0.55+dbRaw*0.45 : dbRaw;
         var db=Math.round(state.smoothDb);
+        // Piso de ruido global (baja rápido, sube muy lento y solo con el cuarto "quieto"):
+        // referencia para detectar VOZ de forma RELATIVA — el nivel crudo del micrófono varía
+        // por dispositivo, así que los umbrales absolutos fallan (y el zumbido de 60 Hz engaña).
+        if(!state.floorRms) state.floorRms=Math.max(res.rms,0.0005);
+        if(res.rms<state.floorRms) state.floorRms=state.floorRms*0.7+res.rms*0.3;   // baja rápido
+        else state.floorRms=Math.min(state.floorRms*1.004, res.rms, 0.02);          // sube lento, también ante ruido constante (ventilador)
+        var voiceGate=Math.max(0.003, state.floorRms*2.5);
+        var isVoiced=res.freq>0 && res.rms>=voiceGate;
         var midi=null, mf=null, cents=0, f=0;
-        if(res.freq>0){
+        if(isVoiced){
           var fr=res.freq;
           // Corrección de octava: si la detección saltó a ~2× o ~½ del tono actual, ajústala
           // (evita que un armónico envenene el suavizado y la nota).
@@ -433,7 +444,7 @@ function startMic(cb){
             f=state.smoothF; mf=freqToMidi(f); midi=modeMidi(state.noteBuf);
           } else { state.smoothF=0; state.noteBuf.length=0; }
         }
-        var s={db:db, freq:f?Math.round(f):0, midi:midi, mf:mf, cents:cents, voiced:res.freq>0};
+        var s={db:db, freq:f?Math.round(f):0, midi:midi, mf:mf, cents:cents, voiced:isVoiced};
         state.reading=s;
         state.history.push({db:db, mf:mf});
         if(state.history.length>110) state.history.shift();
@@ -444,7 +455,7 @@ function startMic(cb){
           }
           // El reloj arranca con la primera voz (la inhalación previa no cuenta).
           // Umbral relativo al ambiente: en un cuarto ruidoso no arranca solo.
-          if(state.waitingVoice && (s.voiced || res.rms>=Math.max(0.012, state.noiseFloorRms*3))){
+          if(state.waitingVoice && (s.voiced || res.rms>=Math.max(voiceGate, state.noiseFloorRms*3))){
             state.waitingVoice=false; startRepTimer(); updateTimer();
           }
           if(db>=55) state.repSamples.db.push(db);
@@ -473,7 +484,7 @@ function startMic(cb){
         }
         // LECTURA: mientras se oye la voz, desvanece lo ya leído (al ritmo del texto en 5 min de voz).
         if(state.readRunning && EXERCISES[state.exIdx].type==="reading" && _readWords.total>0){
-          if(s.voiced || res.rms>=0.012) state.readSoundTs=ts;
+          if(s.voiced || res.rms>=voiceGate) state.readSoundTs=ts;
           if(state.readSoundTs && (ts-state.readSoundTs)<450){   // tolera pausas cortas entre palabras
             state.readProgress=Math.min(_readWords.total, (state.readProgress||0) + _readWords.rate*((ts-(state.readAdvTs||ts))/1000));
             var _upto=Math.floor(state.readProgress);
