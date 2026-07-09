@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="theme-color" content="#eef1fa" />
-<meta name="apple-mobile-web-app-title" content="LSVT LOUD" />
-<title>LSVT LOUD</title>
+<meta name="apple-mobile-web-app-title" content="Practica tu voz" />
+<title>PRACTICA TU VOZ</title>
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="icon-180.png" />
 <style>
@@ -805,7 +805,7 @@ function HomeScreen(){
   var doneCount=Object.keys(state.done).length;
 
   var head=el("div",{style:"padding:calc(env(safe-area-inset-top) + 28px) 24px 8px;text-align:center;"});
-  head.appendChild(el("div",{style:"font-size:33px;font-weight:900;letter-spacing:-2px;color:#0a0a0a;line-height:1;"},"LSVT LOUD"));
+  head.appendChild(el("div",{style:"font-size:33px;font-weight:900;letter-spacing:-2px;color:#0a0a0a;line-height:1;"},"PRACTICA TU VOZ"));
   head.appendChild(el("div",{style:"margin-top:5px;font-size:15px;color:#0d47a1;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
   head.appendChild(el("div",{style:"margin-top:2px;font-size:9px;color:#93a0c8;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
   if(streak>0){
@@ -1387,7 +1387,7 @@ function shareReadRecording(){
     var file=new File([state.recBlob], fname, {type:state.recMime});
     if(navigator.canShare && navigator.canShare({files:[file]})){
       var esConv=EXERCISES[state.exIdx]&&EXERCISES[state.exIdx].type==="conversation";
-      navigator.share({files:[file], title:(esConv?"Conversación":"Lectura")+" LSVT LOUD", text:"Grabación de mi ejercicio de "+(esConv?"conversación":"lectura en voz alta")+" (LSVT LOUD)."}).catch(function(){});
+      navigator.share({files:[file], title:(esConv?"Conversación":"Lectura")+" — Practica tu voz", text:"Grabación de mi ejercicio de "+(esConv?"conversación":"lectura en voz alta")+" (Practica tu voz)."}).catch(function(){});
       return;
     }
   }catch(e){}
@@ -1611,7 +1611,7 @@ function DoneScreen(){
 // Resumen de progreso en texto (para enviarlo al médico por WhatsApp).
 function progressSummary(){
   var streak=computeStreak(state.log);
-  var lines=["📈 Mi progreso LSVT LOUD",
+  var lines=["📈 Mi progreso — Practica tu voz",
     "Sesiones: "+state.log.length+" · Racha: "+streak+(streak===1?" día":" días"),""];
   state.log.slice().sort(function(a,b){return b.id-a.id;}).slice(0,20).forEach(function(s){
     var d=new Date(s.date), exs=s.exercises||{}, agg=aggScores(exs);
@@ -1626,13 +1626,13 @@ function progressSummary(){
   return lines.join("\n");
 }
 function shareProgress(){
-  if(navigator.share){ navigator.share({title:"Progreso LSVT LOUD", text:progressSummary()}).catch(function(){}); return; }
+  if(navigator.share){ navigator.share({title:"Progreso — Practica tu voz", text:progressSummary()}).catch(function(){}); return; }
   downloadBackup();
 }
 // Respaldo completo en JSON: protege el historial si el navegador borra localStorage.
 function downloadBackup(){
   var d=new Date();
-  var data={app:"LSVT LOUD", exportedAt:d.toISOString(), settings:state.settings, log:state.log};
+  var data={app:"PRACTICA TU VOZ", exportedAt:d.toISOString(), settings:state.settings, log:state.log};
   var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   var url=URL.createObjectURL(blob);
   var a=document.createElement("a"); a.href=url;

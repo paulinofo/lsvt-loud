@@ -1,7 +1,7 @@
 {
-  "name": "LSVT LOUD",
-  "short_name": "LSVT LOUD",
-  "description": "Terapia de voz LSVT LOUD: ejercicios, medidor de dB y tono, historial.",
+  "name": "PRACTICA TU VOZ",
+  "short_name": "Practica tu voz",
+  "description": "Practica tu voz: ejercicios de terapia vocal (LSVT LOUD), medidor de dB y tono, historial.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
