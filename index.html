@@ -293,6 +293,7 @@ var state = {
   history:[], repSamples:{db:[],hz:[],zin:0,ztot:0},
   heardSound:false, soundFrames:0, lastSoundTs:0, lastPhrase:null,   // frases: fin por silencio + calificación
   noiseFloorRms:0, phrasePeakRms:0,   // ruido ambiente medido antes de la voz y pico de la voz (umbral adaptativo)
+  cycleOk:0, cycleN:0, cycleSummary:null,   // frases: conteo de la ronda de 10 y su calificación 0–10
   zoneNow:null, targetNow:null,          // metas personalizadas del ejercicio abierto
   convTopic:null, convStats:null, editReading:false, lastRep:null
 };
@@ -623,7 +624,7 @@ function openEx(i){
   state.zoneNow=exZone(ex); state.targetNow=exTarget(ex);   // metas personalizadas (récords propios)
   state.exIdx=i; state.rep=0; state.phraseIdx=0; state.sec=0; state.running=false;
   state.editPhrases=false; state.editReading=false; state.lastRep=null; state.convStats=null;
-  state.repLog=[]; state.dbLog=[]; state.history=[]; state.screen="ex"; render();
+  state.repLog=[]; state.dbLog=[]; state.history=[]; state.cycleOk=0; state.cycleN=0; state.cycleSummary=null; state.lastPhrase=null; state.screen="ex"; render();
 }
 function goHome(){ if(state.timer){clearInterval(state.timer);state.timer=null;} clearPause(); clearRead(); state.running=false; if(state.micOn) stopMic(); state.screen="home"; render(); }
 function newSession(){ if(state.micOn) stopMic(); clearRead(); state.done={}; state.sessionId=null; state.settings.resetAt=Date.now(); saveSettings(state.settings); state.screen="home"; render(); }
@@ -712,6 +713,39 @@ function gapOverlay(){
   ov.appendChild(el("div",{style:"margin-top:6px;font-size:12px;color:#93a0c8;"},pie));
   return ov;
 }
+/* ─────────── Frases: calificación 0–10 al terminar cada ronda de 10 ─────────── */
+function showCycleSummary(isLast){
+  state.cycleSummary={score:(state.cycleN>0)?state.cycleOk:null, outOf:exPhrases(EXERCISES[state.exIdx]).length, last:isLast};
+  state.cycleOk=0; state.cycleN=0;
+  render();
+}
+function cycleContinue(){
+  var last=state.cycleSummary&&state.cycleSummary.last;
+  state.cycleSummary=null;
+  if(last) finishEx(EXERCISES[state.exIdx].id);
+  else phraseNext();
+}
+function cycleSummaryOverlay(){
+  var cs=state.cycleSummary, r=(cs.score!=null)?cs.score/cs.outOf:null;
+  var emoji, col, msg;
+  if(r==null){ emoji="🎤"; col="#5a6899"; msg="Sin micrófono no hay calificación. Actívalo en la siguiente ronda para medirte."; }
+  else if(r>=0.9){ emoji="🌟"; col="#2e7d32"; msg="¡Excelente! Tu voz sonó fuerte y clara. Sigue así."; }
+  else if(r>=0.7){ emoji="👏"; col="#2e7d32"; msg="¡Muy bien! La mayoría fueron fuertes. Un empujón más y son todas."; }
+  else if(r>=0.5){ emoji="💪"; col="#e65100"; msg="Vas a la mitad. La siguiente ronda: ¡MÁS FUERTE!"; }
+  else { emoji="💪"; col="#c62828"; msg="Necesitas más fuerza. Respira hondo y di cada frase ¡MUCHO MÁS FUERTE!"; }
+  var ov=el("div",{style:"position:fixed;inset:0;z-index:56;background:rgba(238,241,250,0.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
+  ov.appendChild(el("div",{style:"font-size:64px;line-height:1;margin-bottom:12px;",class:"card"},emoji));
+  ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:4px;color:"+col+";text-transform:uppercase;margin-bottom:6px;font-weight:800;"},"CALIFICACIÓN DE LA RONDA"));
+  if(cs.score!=null){
+    ov.appendChild(el("div",{style:"font-size:72px;font-weight:900;letter-spacing:-2px;color:"+col+";line-height:1;margin:4px 0 4px;"},cs.score+" / "+cs.outOf));
+    ov.appendChild(el("div",{style:"font-size:12px;color:#93a0c8;margin-bottom:12px;"},"frases con voz fuerte (≥70% arriba de la meta)"));
+  }
+  ov.appendChild(el("div",{style:"font-size:15px;color:#5a6899;line-height:1.7;max-width:300px;"},msg));
+  ov.appendChild(el("div",{style:"margin-top:10px;font-size:12px;color:#93a0c8;"},"💧 Descansa e hidrátate si lo necesitas."));
+  ov.appendChild(btn(cs.last?"✓  TERMINAR EJERCICIO":"▶  SIGUIENTE RONDA",
+    "margin-top:22px;border:none;border-radius:16px;padding:17px 40px;font-size:17px;font-weight:900;color:#fff;background:"+(cs.last?"#2e7d32":"#e65100")+";letter-spacing:0.5px;", cycleContinue));
+  return ov;
+}
 function pauseOverlay(){
   var ov=el("div",{style:"position:fixed;inset:0;z-index:60;background:rgba(238,241,250,0.96);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
   ov.appendChild(el("div",{style:"font-size:80px;line-height:1;margin-bottom:14px;",class:"card"},"💧"));
@@ -779,6 +813,12 @@ function repDone(){
       avgHz:hz.length?hz.reduce(function(a,b){return a+b;},0)/hz.length:0 };
   }
   state.dbLog.push(audio);
+  // Frases: califica la frase (pasa con ≥70% del tiempo hablado por arriba de la meta)
+  // y lleva el conteo de la ronda de 10 para la calificación 0–10.
+  if(ex.type==="phrases"){
+    state.lastPhrase = (audio && audio.pctOnTarget!=null) ? {pct:audio.pctOnTarget, ok:audio.pctOnTarget>=70} : null;
+    if(state.lastPhrase){ state.cycleN++; if(state.lastPhrase.ok) state.cycleOk++; }
+  }
   if(state.rep+1>=exTotal(ex)){
     var avg=Math.round(state.repLog.reduce(function(a,b){return a+b;},0)/state.repLog.length);
     var best=Math.max.apply(null,state.repLog);
@@ -800,13 +840,12 @@ function repDone(){
     }
     stats.scores=exerciseScores(ex, stats);
     recordExercise(ex.id, stats);
-    finishEx(ex.id);
+    if(ex.type==="phrases"){ showCycleSummary(true); }   // calificación de la última ronda; TERMINAR cierra
+    else finishEx(ex.id);
   } else if(ex.type==="phrases"){
-    // Califica la frase: pasa si estuvo ≥70% del tiempo (hablado) por arriba de la meta de dB.
-    state.lastPhrase = (audio && audio.pctOnTarget!=null) ? {pct:audio.pctOnTarget, ok:audio.pctOnTarget>=70} : null;
-    // Al terminar cada frase, ¿toca pausa de agua (tras ciclo 2) o pausa de 3s + auto-avance?
+    // ¿Terminó la ronda de 10 frases? → calificación 0–10 (y descanso); si no, pausa de 3s y sigue.
     var perCycle=exPhrases(ex).length;            // 10
-    if(state.rep+1 === 2*perCycle){ startWaterBreak(); }   // acaba de completar el 2º ciclo (frase 20)
+    if((state.rep+1)%perCycle===0){ showCycleSummary(false); }
     else { startPhraseGap(); }                             // 3s y avanza sola
   } else {
     // Sostenidos: ¿alcanzó la meta de tiempo? felicita; si no (cerró con ✓ LISTO antes), anima a mejorar.
@@ -1295,6 +1334,7 @@ function PhraseScreen(){
   wrap.appendChild(foot);
   if(state.paused) wrap.appendChild(pauseOverlay());
   if(state.gap>0) wrap.appendChild(gapOverlay());
+  if(state.cycleSummary) wrap.appendChild(cycleSummaryOverlay());
   return wrap;
 }
 
