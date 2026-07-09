@@ -291,6 +291,7 @@ var state = {
   audioCtx:null, stream:null, analyser:null, raf:null, lastTs:0, smoothF:0, smoothDb:0,
   noteBuf:[], voidFrames:0,
   history:[], repSamples:{db:[],hz:[],zin:0,ztot:0},
+  heardSound:false, soundFrames:0, lastSoundTs:0, lastPhrase:null,   // frases: fin por silencio + calificación
   zoneNow:null, targetNow:null,          // metas personalizadas del ejercicio abierto
   convTopic:null, convStats:null, editReading:false, lastRep:null
 };
@@ -428,7 +429,7 @@ function startMic(cb){
         state.history.push({db:db, mf:mf});
         if(state.history.length>110) state.history.shift();
         if(state.running && !state.paused){
-          // Sostenidos: el reloj arranca con la primera voz (la inhalación previa no cuenta).
+          // El reloj arranca con la primera voz (la inhalación previa no cuenta).
           if(state.waitingVoice && (s.voiced || res.rms>=0.012)){
             state.waitingVoice=false; startRepTimer(); updateTimer();
           }
@@ -438,8 +439,19 @@ function startMic(cb){
             var ez=state.zoneNow||EXERCISES[state.exIdx].zone;
             if(ez){ state.repSamples.ztot++; if(inZone(s.mf,ez)) state.repSamples.zin++; }
           }
-          // NOTA: la repetición NO se cierra por silencio (una voz débil que baja se confundía con
-          // "callar" y cortaba antes de tiempo). Solo cierra por la meta de tiempo o el botón ✓ LISTO.
+          // FRASES: al terminar de decir la frase, 2 s de silencio continuo la dan por terminada.
+          // (Solo frases: en los sostenidos NO se cierra por silencio — una voz débil que baja se
+          //  confundía con "callar" y cortaba antes de tiempo; ahí cierra la meta o ✓ LISTO.)
+          if(EXERCISES[state.exIdx].type==="phrases" && !state.waitingVoice){
+            var makingSound = s.voiced || res.rms>=0.006;
+            if(makingSound){
+              state.lastSoundTs=ts;
+              if(++state.soundFrames>=3) state.heardSound=true;   // ~200 ms de voz real: ignora clics sueltos
+            } else {
+              state.soundFrames=0;
+              if(state.heardSound && (ts-state.lastSoundTs)>=PHRASE_END_SILENCE_MS){ repDone(); }
+            }
+          }
         }
         updateLive();
       }
@@ -672,7 +684,14 @@ function gapOverlay(){
     }
     pie="Respira. La siguiente repetición empieza sola.";
   } else {
-    emoji="👏"; titulo="Cambia de frase"; col="#e65100"; cue=SENSE_CUES[state.rep%SENSE_CUES.length]; pie="Respira. La siguiente frase empieza sola.";
+    // Frases: califica la frase — pasa con ≥70% del tiempo por arriba de la meta de dB.
+    pie="Respira. La siguiente frase empieza sola.";
+    if(state.lastPhrase && state.lastPhrase.pct!=null){
+      if(state.lastPhrase.ok){ emoji="👏"; titulo="¡Fuerte y claro!"; col="#2e7d32"; cue=state.lastPhrase.pct+"% del tiempo arriba de la meta — ¡así se habla!"; }
+      else { emoji="💪"; titulo="Más fuerte"; col="#e65100"; cue="Solo "+state.lastPhrase.pct+"% arriba de la meta (necesitas 70%). La siguiente: ¡MÁS FUERTE!"; }
+    } else {
+      emoji="👏"; titulo="Cambia de frase"; col="#e65100"; cue=SENSE_CUES[state.rep%SENSE_CUES.length];
+    }
   }
   var ov=el("div",{style:"position:fixed;inset:0;z-index:55;background:rgba(238,241,250,0.95);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
   ov.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;",class:"card"},emoji));
@@ -697,6 +716,8 @@ function pauseOverlay(){
 }
 
 /* ─────────── Cronómetro ─────────── */
+// Frases: tras oír la frase, este silencio continuo (ms) la da por terminada.
+var PHRASE_END_SILENCE_MS=2000;
 function tickStart(){
   // Pedir micrófono PRIMERO, aún dentro del gesto del toque (clave en iOS).
   if(!state.micOn){ startMic(function(ok){
@@ -705,8 +726,10 @@ function tickStart(){
   }); }
   state.sec=0; state.running=true;
   state.repSamples={db:[],hz:[],zin:0,ztot:0}; state.history=[];
-  // Sostenidos: el reloj arranca al oír la voz (la inhalación previa no cuenta).
-  state.waitingVoice = EXERCISES[state.exIdx].type==="sustain" && !state.micError;
+  state.heardSound=false; state.soundFrames=0; state.lastSoundTs=0;   // re-arma el fin por silencio (frases)
+  // Sostenidos y frases: el reloj arranca al oír la voz (la inhalación previa no cuenta).
+  var _t=EXERCISES[state.exIdx].type;
+  state.waitingVoice = (_t==="sustain"||_t==="phrases") && !state.micError;
   if(!state.waitingVoice){ startRepTimer(); }
   else {
     // Red de seguridad: si el micrófono no llega a conectar (p.ej. permiso colgado), arranca solo.
@@ -768,7 +791,9 @@ function repDone(){
     recordExercise(ex.id, stats);
     finishEx(ex.id);
   } else if(ex.type==="phrases"){
-    // Frases: al terminar cada frase, ¿toca pausa de agua (tras ciclo 2) o pausa de 3s + auto-avance?
+    // Califica la frase: pasa si estuvo ≥70% del tiempo (hablado) por arriba de la meta de dB.
+    state.lastPhrase = (audio && audio.pctOnTarget!=null) ? {pct:audio.pctOnTarget, ok:audio.pctOnTarget>=70} : null;
+    // Al terminar cada frase, ¿toca pausa de agua (tras ciclo 2) o pausa de 3s + auto-avance?
     var perCycle=exPhrases(ex).length;            // 10
     if(state.rep+1 === 2*perCycle){ startWaterBreak(); }   // acaba de completar el 2º ciclo (frase 20)
     else { startPhraseGap(); }                             // 3s y avanza sola
@@ -1253,6 +1278,7 @@ function PhraseScreen(){
   if(!state.running){
     foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  CONTINUAR", BIG_BTN+"background:"+ex.color+";", tickStart));
   } else {
+    if(state.micOn) foot.appendChild(el("div",{style:"font-size:12px;color:#5a6899;text-align:center;margin-bottom:9px;line-height:1.5;"},"Di la frase FUERTE · al callar 2 s, termina sola"));
     foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:#2e7d32;border:2px solid #2e7d32;", repDone));
   }
   wrap.appendChild(foot);
