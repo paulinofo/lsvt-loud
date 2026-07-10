@@ -31,7 +31,156 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v36";
+var APP_VER="v37";
+
+/* ─────────── Idioma (ES/EN) ───────────
+   t(s): traduce cadenas ESTÁTICAS exactas vía TR (se aplica automáticamente en el()).
+   tt(es,en): para cadenas DINÁMICAS compuestas en el código.
+   Los datos (ejercicios, temas, cues, tareas) se traducen por TR; las lecturas tienen set propio EN. */
+function isEN(){ return state && state.settings && state.settings.lang==="en"; }
+function tt(es,en){ return isEN()?en:es; }
+function trs(s){ if(!isEN()||typeof s!=="string") return s; var r=TR[s]; return r!=null?r:s; }
+var TR={
+"PRACTICA TU VOZ":"PRACTICE YOUR VOICE",
+"💬 ¡PIENSA FUERTE!":"💬 THINK LOUD!",
+"por Poli":"by Poli",
+"Medidor":"Meter","Historial":"History","dB + tono + piano":"dB + pitch + piano",
+"Reiniciar sesión de hoy":"Restart today's session",
+"TONO NORMAL":"NORMAL PITCH","TONO ALTO":"HIGH PITCH","TONO GRAVE":"LOW PITCH","FRASES":"PHRASES","LECTURA":"READING","CONVERSACIÓN":"CONVERSATION",
+"Ejercicio 1 · Voz cómoda":"Exercise 1 · Comfortable voice",
+"Ejercicio 2 · Voz aguda":"Exercise 2 · High voice",
+"Ejercicio 3 · Voz grave":"Exercise 3 · Low voice",
+"Ejercicio 4 · Voz funcional":"Exercise 4 · Functional voice",
+"Ejercicio 5 · Párrafo en voz alta":"Exercise 5 · Read out loud",
+"Ejercicio 6 · Habla espontánea":"Exercise 6 · Spontaneous speech",
+"Inhala profundo · Vocaliza AHHH en tono normal · Lo MÁS FUERTE posible · Mantén tanto como puedas":"Breathe in deep · Say AHHH at your normal pitch · As LOUD as you can · Hold it as long as you can",
+"Inhala profundo · Empieza AHHH en tu tono normal y SUBE deslizando · Sostén tu tono MÁS ALTO · Lo MÁS FUERTE posible":"Breathe in deep · Start AHHH at your normal pitch and GLIDE UP · Hold your HIGHEST pitch · As LOUD as you can",
+"Inhala profundo · Empieza AHHH en tu tono normal y BAJA deslizando · Sostén tu tono MÁS GRAVE · Lo MÁS FUERTE posible":"Breathe in deep · Start AHHH at your normal pitch and GLIDE DOWN · Hold your LOWEST pitch · As LOUD as you can",
+"Di cada frase EN VOZ ALTA y FUERTE · Si sientes que exageras — ¡vas bien!":"Say each phrase OUT LOUD and STRONG · If it feels exaggerated — you're doing it right!",
+"Lee el párrafo EN VOZ ALTA · PIENSA: ¡VOZ FUERTE! · Imagina hablarle a alguien a 3 metros":"Read the passage OUT LOUD · THINK: LOUD VOICE! · Imagine talking to someone 10 feet away",
+"Habla 5 minutos con VOZ FUERTE sobre el tema · Con alguien, por teléfono, o grábate respondiendo las preguntas":"Talk for 5 minutes with a LOUD VOICE about the topic · With someone, on the phone, or record yourself answering the questions",
+"rango normal (LA2–MI3)":"normal range (A2–E3)","zona aguda (SOL3+)":"high zone (G3+)","zona grave (SOL2−)":"low zone (G2−)",
+"Buenos días, ¿cómo estás hoy?":"Good morning, how are you today?",
+"Muchas gracias por tu ayuda.":"Thank you very much for your help.",
+"Con permiso, necesito pasar.":"Excuse me, I need to get through.",
+"Por favor, ¿me puedes escuchar?":"Please, can you hear me?",
+"Quiero hablar con voz fuerte y clara.":"I want to speak loud and clear.",
+"Hoy es un buen día para practicar.":"Today is a good day to practice.",
+"¿Puedes repetir lo que dijiste?":"Can you repeat what you said?",
+"Necesito agua, ¿hay por favor?":"I need some water, please.",
+"Me siento bien y con energía.":"I feel good and full of energy.",
+"Hasta luego, que tengas un buen día.":"See you later, have a great day.",
+"Tu día de hoy":"Your day today","¿Qué hiciste esta mañana?":"What did you do this morning?","¿Qué fue lo mejor del día?":"What was the best part of your day?","¿Qué planes tienes para mañana?":"What are your plans for tomorrow?",
+"Tu familia":"Your family","¿Cómo se llaman tus hijos o nietos y cómo son?":"What are your children's or grandchildren's names, and what are they like?","¿Qué te gusta hacer con ellos?":"What do you like to do with them?","Cuenta una anécdota familiar divertida.":"Tell a funny family story.",
+"Recuerdos de infancia":"Childhood memories","¿Dónde creciste y cómo era?":"Where did you grow up, and what was it like?","¿A qué jugabas de niño?":"What games did you play as a child?","¿Quién era tu mejor amigo y qué hacían?":"Who was your best friend, and what did you do together?",
+"Comida":"Food","¿Cuál es tu platillo favorito y cómo se prepara?":"What's your favorite dish, and how is it made?","¿Quién cocinaba mejor en tu casa?":"Who was the best cook in your home?","¿Qué comida te trae buenos recuerdos?":"What food brings back good memories?",
+"Música y películas":"Music and movies","¿Qué música te gusta y por qué?":"What music do you like, and why?","¿Cuál es una película que recomendarías?":"What movie would you recommend?","¿Qué canción te sabes de memoria?":"What song do you know by heart?",
+"Viajes y lugares":"Travel and places","¿Cuál es el lugar más bonito que conoces?":"What's the most beautiful place you know?","¿A dónde te gustaría ir?":"Where would you like to go?","Describe tu lugar favorito de tu ciudad.":"Describe your favorite place in your city.",
+"Tu trabajo u oficio":"Your work or trade","¿A qué te has dedicado en la vida?":"What have you done for a living?","¿Qué es lo que más te gustaba de tu trabajo?":"What did you like most about your work?","¿Qué aprendiste que sigues usando?":"What did you learn that you still use?",
+"Aficiones":"Hobbies","¿Qué te gusta hacer en tu tiempo libre?":"What do you like to do in your free time?","¿Qué deporte o pasatiempo disfrutas ver o practicar?":"What sport or hobby do you enjoy watching or doing?","¿Qué te gustaría aprender?":"What would you like to learn?",
+"El mundo de hoy":"Today's world","¿Qué noticia te llamó la atención esta semana?":"What news story caught your attention this week?","¿Qué ha cambiado más desde que eras joven?":"What has changed the most since you were young?","¿Qué invento moderno te parece el mejor?":"What modern invention do you think is the best?",
+"Planes e ilusiones":"Plans and dreams","¿Qué te hace ilusión próximamente?":"What are you looking forward to?","¿Qué celebración o fecha esperas con ganas?":"What celebration or date are you excited about?","¿Qué consejo le darías a un joven?":"What advice would you give a young person?",
+"¿Sentiste ese esfuerzo? Así debe sentirse tu voz fuerte.":"Did you feel that effort? That's how your loud voice should feel.",
+"Ese esfuerzo que notas es tu nueva voz normal — memorízalo.":"That effort you notice is your new normal voice — memorize it.",
+"Recuerda esta sensación y úsala hoy al hablar con los demás.":"Remember this feeling and use it today when talking to others.",
+"Si se siente exagerado, va perfecto: así suena normal a los demás.":"If it feels exaggerated, that's perfect: that's how it sounds normal to others.",
+"¡Casi! La próxima aguanta un poquito más.":"Almost! Hold on a little longer next time.",
+"Respira hondo y vuelve con más fuerza.":"Take a deep breath and come back stronger.",
+"Cada día un segundito más. ¡Tú puedes!":"One more second every day. You can do it!",
+"Un poco más de aire y llegas a la meta.":"A little more air and you'll reach the goal.",
+"Vas bien. No te rindas, ¡otra vez!":"You're doing well. Don't give up — again!",
+"Empuja un poquito más, lo tienes.":"Push a little more, you've got this.",
+"Fuerza y calma: la próxima es tuya.":"Strength and calm: the next one is yours.",
+"Ánimo, cada intento te hace más fuerte.":"Courage — every attempt makes you stronger.",
+"Saluda hoy a alguien con tu VOZ FUERTE: «¡Buenos días! ¿Cómo estás?»":"Greet someone today with your LOUD VOICE: \"Good morning! How are you?\"",
+"Haz una llamada telefónica y usa tu voz fuerte durante toda la llamada":"Make a phone call and use your loud voice for the whole call",
+"Pide algo en una tienda o restaurante con voz fuerte y clara":"Order something at a store or restaurant with a loud, clear voice",
+"Cuéntale a alguien cómo estuvo tu día, con voz fuerte y sin que te pida repetir":"Tell someone about your day, loud enough that they never ask you to repeat",
+"Lee en voz alta una noticia a alguien que esté a 3 metros de ti":"Read a news story out loud to someone 10 feet away",
+"Llama a un familiar solo para saludarlo, con tu voz más fuerte y clara":"Call a family member just to say hello, with your loudest, clearest voice",
+"Da las gracias tres veces hoy con voz fuerte: «¡MUCHAS GRACIAS!»":"Say thank you three times today with a loud voice: \"THANK YOU VERY MUCH!\"",
+"Comparte una opinión en la comida con voz fuerte y sin prisa":"Share an opinion at mealtime with a loud voice, no rushing",
+"Canta un verso de tu canción favorita con voz fuerte":"Sing a verse of your favorite song with a loud voice",
+"Hazle una pregunta a un vecino o conocido proyectando la voz":"Ask a neighbor or acquaintance a question, projecting your voice",
+"· · · VOCALIZA":"· · · SPEAK UP","⬇ BAJO":"⬇ LOW","¡MÁS FUERTE!":"LOUDER!","✓ EN RANGO":"✓ IN RANGE","¡MANTÉN ASÍ!":"KEEP IT UP!","⬆ MUY FUERTE":"⬆ VERY LOUD","potente — sin tensar":"powerful — don't strain",
+"✓ agudo":"✓ high","⬆ sube más":"⬆ go higher","✓ grave":"✓ low","⬇ baja más":"⬇ go lower","⬇ muy grave":"⬇ too low","⬆ muy agudo":"⬆ too high","✓ normal":"✓ normal",
+"Excelente":"Excellent","Muy bien":"Very good","Bien":"Good","Sigue practicando":"Keep practicing","A mejorar":"Needs work",
+"¡Meta cumplida!":"Goal reached!","¡Un poco más!":"Almost there!",
+"Respira. La siguiente repetición empieza sola.":"Breathe. The next rep starts on its own.",
+"Respira. La siguiente empieza sola.":"Breathe. The next one starts on its own.",
+"Sin micrófono no hay calificación. Actívalo en la siguiente ronda para medirte.":"Without the microphone there's no score. Turn it on next round to measure yourself.",
+"¡Excelente! Tu voz sonó fuerte y clara. Sigue así.":"Excellent! Your voice was loud and clear. Keep it up.",
+"¡Muy bien! La mayoría fueron fuertes. Un empujón más y son todas.":"Very good! Most were loud. One more push and it's all of them.",
+"Vas a la mitad. La siguiente ronda: ¡MÁS FUERTE!":"Halfway there. Next round: LOUDER!",
+"Necesitas más fuerza. Respira hondo y di cada frase ¡MUCHO MÁS FUERTE!":"You need more power. Take a deep breath and say each phrase MUCH LOUDER!",
+"CALIFICACIÓN DE LA RONDA":"ROUND SCORE",
+"frases con voz fuerte (≥70% arriba de la meta)":"phrases said with a loud voice (≥70% above target)",
+"💧 Descansa e hidrátate si lo necesitas.":"💧 Rest and drink water if you need to.",
+"✓  TERMINAR EJERCICIO":"✓  FINISH EXERCISE","▶  SIGUIENTE RONDA":"▶  NEXT ROUND",
+"En pausa":"Paused","Toma agua":"Drink water","Descansa e hidrátate. Reanuda cuando estés listo.":"Rest and hydrate. Resume when you're ready.","REANUDAR":"RESUME",
+"🎤 Medir":"🎤 Measure","🔄 Reintentar":"🔄 Retry",
+"🎤 ACTIVAR TERMÓMETRO DE VOLUMEN":"🎤 TURN ON THE VOLUME THERMOMETER",
+"(también se activa solo al tocar ▶ INICIAR)":"(it also turns on when you tap ▶ START)",
+"📏 Teléfono a ~30 cm de tu boca, siempre igual":"📏 Phone ~12 in from your mouth, always the same",
+"🎹 TU TONO EN EL PIANO":"🎹 YOUR PITCH ON THE PIANO","tu nota se resalta":"your note lights up","toca para escuchar":"tap to hear",
+"PROM":"AVG","MEJOR":"BEST","dB MÁX":"MAX dB","% RANGO":"% RANGE",
+"▶  INICIAR":"▶  START","▶  SIGUIENTE REP":"▶  NEXT REP","▶  CONTINUAR":"▶  CONTINUE","✓  LISTO":"✓  DONE",
+"Al llegar a la meta o al callar, pasa sola a la siguiente":"When you reach the goal or go quiet, it moves on by itself",
+"🎤 apagado":"🎤 off","🎤 se activa al comenzar":"🎤 turns on when you start",
+"🎤 EL RELOJ ARRANCA CON TU VOZ":"🎤 THE CLOCK STARTS WITH YOUR VOICE","✓ META DE TIEMPO":"✓ TIME GOAL MET",
+"FRASES FUNCIONALES":"FUNCTIONAL PHRASES",
+"✏️  Personalizar mis frases":"✏️  Customize my phrases",
+"📢 DI LA FRASE EN VOZ ALTA":"📢 SAY THE PHRASE OUT LOUD",
+"Toca ▶ INICIAR para medir tu volumen y tiempo mientras dices la frase en voz alta.":"Tap ▶ START to measure your volume and time while you say the phrase out loud.",
+"Di la frase FUERTE · haz las pausas que necesites · al terminar se cierra sola":"Say the phrase LOUD · pause as much as you need · when you finish it closes on its own",
+"MIS FRASES":"MY PHRASES","Personalizar frases":"Customize phrases",
+"El protocolo LSVT LOUD usa 10 frases que TÚ dices todos los días: saludos, peticiones, nombres de tu familia. Escríbelas con tus palabras — practicar con frases propias transfiere la voz fuerte a tu vida diaria.":"The LSVT LOUD protocol uses 10 phrases YOU say every day: greetings, requests, your family's names. Write them in your own words — practicing with your own phrases carries the loud voice into your daily life.",
+"✓  GUARDAR MIS FRASES":"✓  SAVE MY PHRASES","↺ Volver a las frases de ejemplo":"↺ Back to the sample phrases",
+"LECTURA EN VOZ ALTA":"READING OUT LOUD","Lee en voz alta durante 5 minutos":"Read out loud for 5 minutes","Cuenta regresiva":"Countdown",
+"▶  Comenzar y grabar":"▶  Start and record","— dB · esperando tu voz…":"— dB · waiting for your voice…","✓ ¡Tiempo completado!":"✓ Time complete!",
+"Si el guía no va contigo: ajústalo con − / + o toca el párrafo donde vas":"If the guide isn't keeping up: adjust it with − / + or tap the paragraph you're on",
+"📖 IMAGINA HABLARLE A ALGUIEN A 3 METROS":"📖 IMAGINE TALKING TO SOMEONE 10 FEET AWAY",
+"¿Terminaste antes de tiempo? Vuelve al inicio y léelo otra vez, aún MÁS FUERTE.":"Finished early? Go back to the top and read it again, even LOUDER.",
+"⏹  Terminar y guardar":"⏹  Finish and save","Preparando la grabación…":"Preparing the recording…",
+"📤  Enviar al médico (WhatsApp)":"📤  Send to your doctor (WhatsApp)","⬇ Descargar":"⬇ Download","✓ Completar":"✓ Complete",
+"⚠️ La grabación no está disponible en este navegador. Abre la app en Safari.":"⚠️ Recording isn't available in this browser. Open the app in Safari.",
+"✓  Lectura completa (sin grabar)":"✓  Reading complete (no recording)",
+"MI TEXTO":"MY TEXT","Texto de lectura propio":"My own reading text",
+"El protocolo LSVT recomienda leer materiales personales y significativos: una carta, tus memorias, una receta familiar, una noticia que te interese. Pega o escribe aquí tu texto (ideal: 500 palabras o más para llenar los 5 minutos).":"The LSVT protocol recommends reading personal, meaningful material: a letter, your memoirs, a family recipe, a news story you care about. Paste or type your text here (ideally 500+ words to fill the 5 minutes).",
+"Título (opcional)":"Title (optional)","Pega o escribe aquí tu texto…":"Paste or type your text here…",
+"✓  GUARDAR MI TEXTO":"✓  SAVE MY TEXT","Mi texto":"My text","↺ Volver a los textos de la app":"↺ Back to the app's texts",
+"CONVERSACIÓN EN VOZ ALTA":"CONVERSATION OUT LOUD","Habla 5 minutos con voz fuerte":"Talk for 5 minutes with a loud voice",
+"¡habla FUERTE, sin prisa!":"speak LOUD, take your time!",
+"🗣️ CON ALGUIEN, POR TELÉFONO, O GRÁBATE RESPONDIENDO":"🗣️ WITH SOMEONE, ON THE PHONE, OR RECORD YOURSELF ANSWERING",
+"🔄 Cambiar de tema":"🔄 Change topic","✓  Conversación completa (sin grabar)":"✓  Conversation complete (no recording)",
+"Sesión completada":"Session complete","Calificación de la sesión":"Session score","📊 Ver mi historial":"📊 See my history","Nueva sesión":"New session",
+"Intensidad":"Loudness","Tono":"Pitch","Esfuerzo":"Effort",
+"MI PROGRESO":"MY PROGRESS","DÍAS ÚNICOS":"UNIQUE DAYS","SESIONES":"SESSIONS","RACHA":"STREAK",
+"⏱ Duración promedio AHHH (seg)":"⏱ Average AHHH duration (sec)","Verde = meta de 8s alcanzada":"Green = 8s goal reached",
+"🔊 Volumen promedio AHHH (dB)":"🔊 Average AHHH volume (dB)",
+"Aún no hay sesiones registradas.<br>Completa un ejercicio y aparecerá aquí. 💪":"No sessions recorded yet.<br>Complete an exercise and it will show up here. 💪",
+"📤  Compartir mi progreso":"📤  Share my progress","⬇ Respaldar datos (JSON)":"⬇ Back up data (JSON)","Borrar historial":"Delete history",
+"MEDIDOR DE VOZ":"VOICE METER","🎹 dB + Tono":"🎹 dB + Pitch","🎯 Meta de volumen":"🎯 Volume target","⚖️ Calibración dB":"⚖️ dB calibration",
+"Los dB son estimados (el micrófono del teléfono no está calibrado). Para igualar la app de tu doctora: vocaliza tu voz normal y sube o baja la calibración hasta que marque lo mismo. El rango objetivo es tu meta a meta+15 dB. Mantén siempre la misma distancia (~30 cm).":"The dB values are estimates (phone microphones aren't calibrated). To match your doctor's app: speak in your normal voice and raise or lower the calibration until they read the same. Keep the same distance (~12 in) every time.",
+"dB est.":"est. dB","VOLUMEN":"VOLUME","NOTA":"NOTE",
+"🔉 Grave":"🔉 Low","DO2 – SOL2":"C2 – G2","🗣️ Habla":"🗣️ Speech","LA2 – MI3":"A2 – E3","📢 Agudo":"📢 High","SOL3 +":"G3 +",
+"💡 <b style='color:#5a6899;'>Toca una tecla</b> para escuchar el tono · <b style='color:#5a6899;'>🎤</b> para medir tu voz · 📏 ~30 cm":"💡 <b style='color:#5a6899;'>Tap a key</b> to hear the pitch · <b style='color:#5a6899;'>🎤</b> to measure your voice · 📏 ~12 in",
+"No se pudo iniciar el audio en este navegador. Prueba abrir la app en Safari.":"Couldn't start audio in this browser. Try opening the app in Safari.",
+"Este navegador no expone el micrófono (mediaDevices no existe). Abre el archivo en Safari, no dentro de otra app.":"This browser doesn't expose the microphone. Open the app in Safari, not inside another app.",
+"Permiso denegado. Toca 🎤 otra vez y elige Permitir. Si no aparece: Ajustes → Safari → Micrófono → Permitir, y recarga.":"Permission denied. Tap 🎤 again and choose Allow. If it doesn't appear: Settings → Safari → Microphone → Allow, then reload.",
+"No se encontró micrófono disponible en el dispositivo.":"No microphone was found on this device.",
+"El micrófono está siendo usado por otra app. Ciérrala e intenta de nuevo.":"The microphone is being used by another app. Close it and try again.",
+"Esta página no está en un contexto seguro (https o archivo local). El micrófono estará bloqueado. Abre el archivo directamente en Safari (file://) o sírvelo por https.":"This page isn't in a secure context (https or local file). The microphone will be blocked. Open the file directly in Safari or serve it over https.",
+"Reps":"Reps","Meta":"Goal","Ciclos":"Rounds","Repeticiones":"Reps","6 tarea":"6 homework",
+"1 párrafo · 5 min":"1 passage · 5 min","5 min de charla":"5 min of talking"
+};
+// Notas musicales: DO-RE-MI en español, C-D-E en inglés (piano, zonas y notas detectadas).
+var NOTE_EN=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+function trNote(str){
+  if(!isEN()||typeof str!=="string") return str;
+  var M={"DO♯":"C♯","RE♯":"D♯","FA♯":"F♯","SOL♯":"G♯","LA♯":"A♯","DO":"C","RE":"D","MI":"E","FA":"F","SOL":"G","LA":"A","SI":"B"};
+  return str.replace(/DO♯|RE♯|FA♯|SOL♯|LA♯|SOL|DO|RE|MI|FA|LA|SI/g,function(m){return M[m]||m;});
+}
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -118,6 +267,19 @@ var READINGS=[
    texto:"Bolívar era pequeño de cuerpo. Los ojos le relampagueaban, y las palabras se le salían de los labios. Parecía como si estuviera esperando siempre la hora de montar a caballo. Era su país, su país oprimido, que le pesaba en el corazón, y no le dejaba vivir en paz. Un hombre solo no vale nunca más que un pueblo entero; pero hay hombres que no se cansan, cuando su pueblo se cansa. Ese fue el mérito de Bolívar, que no se cansó de pelear por la libertad de Venezuela, cuando parecía que Venezuela se cansaba. Lo habían derrotado los españoles: lo habían echado del país. Él se fue a una isla, a ver su tierra de cerca, a pensar en su tierra.\n\nUn negro generoso lo ayudó cuando ya no lo quería ayudar nadie. Volvió un día a pelear, con trescientos héroes, con los trescientos libertadores. Libertó a Venezuela. Libertó a la Nueva Granada. Libertó al Ecuador. Libertó al Perú. Fundó una nación nueva, la nación de Bolivia. Ganó batallas sublimes con soldados descalzos y medio desnudos. Todo se estremecía y se llenaba de luz a su alrededor. Jamás se peleó tanto, ni se peleó mejor, en el mundo por la libertad.\n\nSan Martín fue el libertador del Sur, el padre de la República Argentina, el padre de Chile. Hablaba poco: parecía de acero: miraba como un águila: nadie lo desobedecía: su caballo iba y venía por el campo de pelea, como el rayo por el aire. En cuanto supo que América peleaba para hacerse libre, vino a América: ¿qué le importaba perder su carrera, si iba a cumplir con su deber? Llegó a Buenos Aires: no dijo discursos: levantó un escuadrón de caballería: en San Lorenzo fue su primera batalla: sable en mano se fue San Martín detrás de los españoles, que venían muy seguros, tocando el tambor, y se quedaron sin tambor, sin cañones y sin bandera.\n\nEn los otros pueblos de América los españoles iban venciendo: pero donde estaba San Martín siguió siendo libre la América. Hay hombres así, que no pueden ver esclavitud. Y se fue a libertar a Chile y al Perú. En dieciocho días cruzó con su ejército los Andes altísimos y fríos: iban los hombres como por el cielo, hambrientos, sedientos: abajo, muy abajo, los árboles parecían yerba, los torrentes rugían como leones. San Martín se encuentra al ejército español y lo deshace en la batalla de Maipú, lo derrota para siempre en la batalla de Chacabuco. Liberta a Chile. Se embarca con su tropa, y va a libertar al Perú. Pero en el Perú estaba Bolívar, y San Martín le cede la gloria. Un escultor es admirable, porque saca una figura de la piedra bruta: pero esos hombres que hacen pueblos son como más que hombres."}
 ];
 
+
+/* ─────────── Lecturas en inglés (textos propios de la app, ~500 palabras ≈ 5 min en voz alta) ─────────── */
+var READINGS_EN=[
+{titulo:"The strength of the bamboo",
+ texto:"Resilience is not the absence of difficulty; it is the strength to grow through it. Think of the bamboo in a storm: it bends with the wind, sometimes almost to the ground, yet it does not break, and when the wind passes it stands tall again. The people who keep going are not the ones who never bend. They are the ones who learned to bend without breaking, and to rise again, a little wiser, after every storm.\n\nThink of a tree growing on a mountainside. The wind strikes it every single day, and yet its roots grow deeper precisely because of that wind. The storms do not destroy it; they teach it to hold on better. People are the same. Every difficulty we face with calm and determination strengthens something inside us that no comfort ever could. Nobody chooses the storms, but all of us can choose to grow deeper roots.\n\nResilient people are not born that way; they are made, day after day, by small acts. They are made when they get up ten minutes earlier to care for their health. They are made when they repeat an exercise even though progress feels slow. They are made when they ask for help without shame, because they know that leaning on others is also a form of strength. Resilience is built the way a good wall is built: one stone every day, without hurry, and without pause.\n\nAdapting is also an act of courage. It is hard to let go of the old way of doing things, hard to accept that the body or the circumstances have changed. But the one who adapts does not lose; the one who adapts transforms. A sailor cannot control the wind, but a sailor can always adjust the sails. Adjusting the sails is not surrender; it is how you keep moving toward the same destination by a new road. Every person who learns a new way to do an old thing is showing the kind of intelligence that only a lived life can give.\n\nYour own life holds chapters that once seemed impossible to get through. And yet here you are: you got through them, you learned, you kept walking. That is the best thing to remember when a new difficulty arrives. You have done it before. You have gotten up before. The memory of your own victories is a treasure nobody can take from you, and returning to it gives you strength when your spirits are low.\n\nCalm can be trained too, and its front door is the breath. When air comes in slow and deep, the whole body gets the message that there is no danger: the muscles loosen, the mind settles, and the voice finds firm support. Before every difficult task, three deep breaths work small miracles.\n\nToday, reading these words out loud and strong, you are practicing exactly that: resilience. Every sentence said with energy is a small victory over the comfort of silence. It does not matter if yesterday was harder, or if tomorrow costs a little more. What matters is that today your voice is here — clear, loud, and yours — and that every day of practice is one more root growing deep."},
+{titulo:"Drop by drop",
+ texto:"Perseverance is the art of continuing when everything invites you to stop. Water, drop by drop, wears through the hardest stone — not by force, but by constancy. That is also how we reach what once seemed impossible: with repetition, discipline, and patience. Great achievements rarely arrive all at once; they are built from small steps sustained over time.\n\nIn the countryside, the farmer plants knowing there will be no fruit tomorrow. He waters the earth day after day without losing patience, because he understands something cities sometimes forget: everything valuable has its own timing. Nobody pulls on a plant to make it grow faster. You care for it, you water it, you trust. The voice is cultivated the same way: every repetition is water, every session is a week of sunshine, and the harvest comes to the one who never abandoned the field.\n\nConstancy has a powerful ally: habit. What at first takes effort and reminders becomes, with time, as natural as brushing your teeth. The first days of any practice are the hardest, because everything is new and the results are invisible. But whoever endures those first weeks discovers that afterwards the habit carries them, and not the other way around. Discipline well planted becomes custom, and custom becomes identity: you are no longer someone trying to practice; you are someone who practices.\n\nWhen progress feels slow, look back at the road you have already walked, not only at the summit. The climber who stares only at the peak gets discouraged; the one who sometimes looks down at the valley discovers how far he has already come. Compare your voice today with your voice on the first day, not with an imaginary perfection. Progress is measured in weeks and months, not in minutes.\n\nRest is part of perseverance too. Resting is not quitting; it is recharging. Muscle grows during the pause, the field renews itself lying fallow, and the voice is also grateful for its moments of silence and water. To persevere does not mean to demand everything of yourself without measure. It means to come back, again and again, with the serenity of someone who knows this is a long race — and the long race is won by the one who stays.\n\nThe greatest cathedrals were raised stone by stone, across whole generations. The stonecutters who laid the first rows knew they would never see the finished towers, and still they worked with care, because they understood that all greatness is a sum of humble days. A grandmother says the same about knitting: stitch by stitch, the blanket that warms the whole family takes shape. Nature works by patient accumulation, and we are part of nature. Every repetition of your voice, every reading like this one, every day marked on the practice calendar is a stone well placed, a stitch well made, a drop that adds up.\n\nWhen you feel you are moving slowly, remember: even the slowest step brings you closer, while giving up takes you away forever. The drop is never in a hurry, and yet it defeats the stone. Keep going, calmly and firmly — today with this reading, out loud and strong; tomorrow with the next one."},
+{titulo:"Attitude changes everything",
+ texto:"The attitude we bring to life transforms what we live. We cannot choose every circumstance, but we can always choose how to answer it. A smile, a kind word, one hopeful thought can change an entire day. Optimism does not ignore difficulties; it looks them in the eye and decides to find a way through.\n\nTwo people can wake up to the same rainy morning. One sees the gray sky and decides the day is ruined. The other hears the rain and is grateful for the cool air, the smell of wet earth, the perfect excuse for a hot coffee. The rain is the same; the day each one lives is completely different. That is the quiet power of attitude: it does not change the weather, but it completely changes the person standing in it.\n\nScience has studied this for years: people who practice gratitude sleep better, get sick less, and recover faster. Not because their lives have fewer problems, but because their attention is trained to also see what works. Every night you can do a simple exercise: name three good things from the day, however small. A tasty meal, a warm phone call, an exercise completed. Gratitude is a flashlight: it lights up what was already there.\n\nAttitude is also contagious. The person who says good morning with a loud voice and a bright spirit changes the mood of the whole table. The one who complains without pause turns off the whole room. We all know someone whose mere presence lifts the day — and the good news is that this is not a mysterious gift. It is a repeated decision. Being that person for others is within reach of anyone who decides it, and it comes with a bonus: you become that person for yourself as well.\n\nSpeaking with a loud voice is, in itself, a declaration of attitude. The one who speaks up is telling the world: here I am, I have something to say, my voice matters. That is why this exercise is much more than muscle training. It is presence training. Every word said with energy reminds the body and the mind that we are not here to hide — that life is lived facing forward and out loud, joining in, giving opinions, telling stories, and saying affections loud enough to be heard.\n\nGood humor deserves a place of honor among the remedies. Laughing, even at ourselves, loosens what worry tightens. A well-timed laugh relaxes the shoulders, opens the chest, and even improves the voice — laughter is, after all, an exercise of air and sound made out of joy. Families that cultivate the old joke, the story told a thousand times, the affectionate nickname, carry their difficulties with a different lightness. The one who can smile at his own stumble has already taken away half its weight.\n\nEvery morning is a blank page waiting to be written with courage and enthusiasm. Tend your thoughts the way you tend a garden: pull out the weeds of discouragement, water the flowers of hope. And speak always with strength and clarity — because whoever believes in themselves, and says it out loud for everyone to hear, has already taken the first step."},
+{titulo:"Your voice is worth hearing",
+ texto:"There is a simple truth that is easy to forget: your voice is worth hearing. Not only for what it says, but for everything it carries — your history, your affection, your humor, your way of seeing the world. When an illness or the passing years try to make a voice smaller, practicing it every day is a way of saying: I am still here, and I still have things to say.\n\nThe voice is a bridge. Over that bridge cross the good mornings, the thank yous, the stories for the grandchildren, the opinions at the table, the phone calls that keep friendships alive. Caring for the voice is caring for all those bridges at once. That is why these minutes of daily practice are never lost time: they are maintenance work on everything that connects you to the people you love.\n\nThink of your voice as a muscle. No one is surprised that legs need walking to stay strong, and no one expects to run a marathon without training. The voice works the same way: it grows with use, with air, with intention. Every AHHH held long and loud, every phrase said with energy, every paragraph read aloud is a repetition in the gym of the voice. And like in any gym, what matters is not being perfect today; what matters is showing up.\n\nSpeaking loud may feel strange at first — even exaggerated. Here is the secret: that exaggeration is almost always exactly right. What sounds enormous from the inside sounds simply clear from the outside. Trust the effort more than the ear. If you feel you are speaking too loud, you are probably, at last, speaking just loud enough. Let your body memorize that feeling: that is your true voice, the one others hear with ease, the one that does not need repeating.\n\nDo not practice against anyone, not even against yourself. The only comparison that matters is with your own yesterday. Is your AHHH a second longer than last month? Did the phone call flow without a single request to repeat? Did someone in the kitchen hear you from the other room on the first try? Those small victories, added together, are the great victory. Write them down, tell them, celebrate them out loud — celebration is also voice practice.\n\nAnd on the harder days, when the body is tired and the voice seems to hide, remember why you practice. It is not for the decibels; the decibels are only a number. It is for the Sunday meal where everyone hears your stories. It is for the phone call where they recognize you at the first word. It is for saying I love you without it getting lost on the way. That is worth every repetition.\n\nSo today, once more: breathe deep, stand tall, and let it out. Loud, clear, unhurried, yours. Read, speak, sing if you want to. Your voice is worth hearing — and the best way to prove it is to use it, right now, out loud."}
+];
+
 /* ─────────── Transferencia diaria (carryover LSVT: voz fuerte en la vida real) ─────────── */
 var CARRYOVER=[
   "Saluda hoy a alguien con tu VOZ FUERTE: «¡Buenos días! ¿Cómo estás?»",
@@ -144,7 +306,7 @@ function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 var NOTE=["DO","DO♯","RE","RE♯","MI","FA","FA♯","SOL","SOL♯","LA","LA♯","SI"];
 function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
 function freqToMidi(f){ return 69+12*Math.log2(f/440); }
-function midiName(m){ return NOTE[((m%12)+12)%12]+(Math.floor(m/12)-1); }
+function midiName(m){ var N=(typeof state!=="undefined"&&isEN())?NOTE_EN:NOTE; return N[((m%12)+12)%12]+(Math.floor(m/12)-1); }
 function hzToNote(hz){ return hz>0?midiName(Math.round(freqToMidi(hz))):"—"; }
 function localDay(iso){ var d=new Date(iso); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
 
@@ -163,13 +325,14 @@ function loadSettings(){
       carryDone: s.carryDone||"",
       myReading: (s.myReading&&s.myReading.texto)?s.myReading:null,
       readWpm: s.readWpm||160,   // ritmo del guía de lectura (palabras/min de habla efectiva), ajustable
+      lang: (s.lang==="en")?"en":"es",   // idioma de la app (toggle 🇲🇽/🇺🇸 en el inicio)
       agcCal: !!s.agcCal, calFix: !!s.calFix, iosDef: !!s.iosDef
     };
     // Ajuste único a los defaults validados en iPhone: meta 70 dB y calibración 114
     // (aplica una sola vez también a instalaciones existentes; después el usuario puede afinarlos).
     if(!out.iosDef){ out.targetDb=70; out.calib=114; out.iosDef=true; try{ localStorage.setItem(LS_SET, JSON.stringify(out)); }catch(e){} }
     return out;
-  }catch(e){ return {calib:114,targetDb:70,reps:{},targets:{},resetAt:0,phrases:null,carryDone:"",myReading:null,readWpm:160,agcCal:true,calFix:true,iosDef:true}; }
+  }catch(e){ return {calib:114,targetDb:70,reps:{},targets:{},resetAt:0,phrases:null,carryDone:"",myReading:null,readWpm:160,lang:"es",agcCal:true,calFix:true,iosDef:true}; }
 }
 function saveSettings(s){ try{ localStorage.setItem(LS_SET, JSON.stringify(s)); }catch(e){} }
 
@@ -191,15 +354,15 @@ function exZone(ex){
   var p=personalPitch();
   if(ex.pitchRole==="max" && p.hi!=null){
     var mn=Math.round(p.hi)-2;
-    return {min:mn, max:z.max, mode:"above", label:"tu zona récord ("+midiName(mn)+"+)"};
+    return {min:mn, max:z.max, mode:"above", label:tt("tu zona récord (","your record zone (")+midiName(mn)+"+)"};
   }
   if(ex.pitchRole==="min" && p.lo!=null){
     var mx=Math.round(p.lo)+2;
-    return {min:z.min, max:mx, mode:"below", label:"tu zona récord ("+midiName(mx)+"−)"};
+    return {min:z.min, max:mx, mode:"below", label:tt("tu zona récord (","your record zone (")+midiName(mx)+"−)"};
   }
   if(ex.pitchRole==="avg" && p.speak!=null){
     var c=Math.round(p.speak);
-    return {min:c-3, max:c+3, mode:"in", label:"tu rango habitual ("+midiName(c-3)+"–"+midiName(c+3)+")"};
+    return {min:c-3, max:c+3, mode:"in", label:tt("tu rango habitual (","your usual range (")+midiName(c-3)+"–"+midiName(c+3)+")"};
   }
   return z;
 }
@@ -509,13 +672,13 @@ function startMic(cb){
         }
         // Diagnóstico visible en la lectura aunque el bucle esté muerto
         if(_readDbNode && state.readRunning && performance.now()-state.lastTs>2000){
-          _readDbNode.textContent="⚠️ análisis de voz detenido — audio: "+(state.audioCtx?state.audioCtx.state:"—");
+          _readDbNode.textContent=tt("⚠️ análisis de voz detenido — audio: ","⚠️ voice analysis stopped — audio: ")+(state.audioCtx?state.audioCtx.state:"—");
           _readDbNode.style.color="#e65100";
         }
       }, 1000);
       render(); if(cb)cb(true);
     }catch(e){
-      state.micError="Micrófono conectado pero falló el procesamiento de audio: "+(e.message||e)+".";
+      state.micError=tt("Micrófono conectado pero falló el procesamiento de audio: ","Microphone connected but audio processing failed: ")+(e.message||e)+".";
       state.micOn=false; render(); if(cb)cb(false);
     }
   }
@@ -530,7 +693,7 @@ function startMic(cb){
     else if(name==="NotReadableError")
       msg="El micrófono está siendo usado por otra app. Ciérrala e intenta de nuevo.";
     else
-      msg="No se pudo acceder al micrófono ("+name+"). Abre el archivo en Safari, no dentro de otra app.";
+      msg=tt("No se pudo acceder al micrófono (","Could not access the microphone (")+name+tt("). Abre el archivo en Safari, no dentro de otra app.","). Open the app in Safari, not inside another app.");
     state.micError=msg;
     state.micOn=false; render(); if(cb)cb(false);
   }
@@ -642,13 +805,13 @@ function el(tag, attrs, children){
   if(attrs){ for(var k in attrs){
     if(k==="style") e.style.cssText=attrs[k];
     else if(k==="class") e.className=attrs[k];
-    else if(k==="html") e.innerHTML=attrs[k];
+    else if(k==="html") e.innerHTML=trs(attrs[k]);
     else e.setAttribute(k, attrs[k]);
   }}
   if(children!=null){
     (Array.isArray(children)?children:[children]).forEach(function(c){
       if(c==null||c===false) return;
-      e.appendChild(typeof c==="string"||typeof c==="number"?document.createTextNode(String(c)):c);
+      e.appendChild(typeof c==="string"||typeof c==="number"?document.createTextNode(trs(String(c))):c);
     });
   }
   return e;
@@ -963,15 +1126,24 @@ function HomeScreen(){
   var head=el("div",{style:"padding:calc(env(safe-area-inset-top) + 28px) 24px 8px;text-align:center;"});
   head.appendChild(el("div",{style:"font-size:33px;font-weight:900;letter-spacing:-2px;color:#0a0a0a;line-height:1;"},"PRACTICA TU VOZ"));
   head.appendChild(el("div",{style:"margin-top:5px;font-size:15px;color:#0d47a1;font-weight:700;letter-spacing:1px;"},"💬 ¡PIENSA FUERTE!"));
-  head.appendChild(el("div",{style:"margin-top:2px;font-size:9px;color:#93a0c8;letter-spacing:3px;font-weight:600;text-transform:uppercase;text-align:right;"},"por Poli"));
+  // Selector de idioma (🇲🇽/🇺🇸) a la izquierda, firma a la derecha — misma altura.
+  var sigRow=el("div",{style:"display:flex;align-items:center;justify-content:space-between;margin-top:2px;"});
+  function langChip(flag,code,lng){
+    var on=state.settings.lang===lng;
+    return btn(flag+" "+code,"border-radius:99px;padding:3px 9px;font-size:10px;font-weight:800;letter-spacing:0.5px;line-height:1;border:1px solid "+(on?"rgba(26,35,126,0.45)":"rgba(26,35,126,0.12)")+";background:"+(on?"rgba(26,35,126,0.10)":"transparent")+";color:"+(on?"#1a237e":"#93a0c8")+";",
+      function(){ if(state.settings.lang!==lng){ state.settings.lang=lng; saveSettings(state.settings); render(); } });
+  }
+  sigRow.appendChild(el("div",{style:"display:inline-flex;gap:5px;"},[langChip("🇲🇽","ES","es"),langChip("🇺🇸","EN","en")]));
+  sigRow.appendChild(el("div",{style:"font-size:9px;color:#93a0c8;letter-spacing:3px;font-weight:600;text-transform:uppercase;"},"por Poli"));
+  head.appendChild(sigRow);
   if(streak>0){
-    head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:rgba(230,81,0,0.1);border:1px solid rgba(230,81,0,0.35);border-radius:99px;padding:5px 15px;font-size:13px;font-weight:800;color:#e65100;"},"🔥 "+streak+(streak===1?" día":" días")+" seguidos"));
+    head.appendChild(el("div",{style:"display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:rgba(230,81,0,0.1);border:1px solid rgba(230,81,0,0.35);border-radius:99px;padding:5px 15px;font-size:13px;font-weight:800;color:#e65100;"},"🔥 "+streak+(isEN()?((streak===1?" day":" days")+" in a row"):((streak===1?" día":" días")+" seguidos"))));
   }
   var barBg=el("div",{style:"margin-top:9px;background:#dde3f3;border-radius:99px;height:5px;overflow:hidden;"});
   barBg.appendChild(el("div",{style:"height:100%;width:"+(doneCount/EXERCISES.length*100)+"%;background:linear-gradient(90deg,#0d47a1,#6a1b9a,#2e7d32);border-radius:99px;transition:width 0.6s ease;"}));
   head.appendChild(barBg);
   var nSess=todaySessions();
-  head.appendChild(el("div",{style:"margin-top:4px;font-size:12px;color:#5a6899;"},doneCount+" / "+EXERCISES.length+" ejercicios · prácticas hoy: "+nSess+"/2"+(nSess>=2?" ✓":"")));
+  head.appendChild(el("div",{style:"margin-top:4px;font-size:12px;color:#5a6899;"},doneCount+" / "+EXERCISES.length+tt(" ejercicios · prácticas hoy: "," exercises · practice today: ")+nSess+"/2"+(nSess>=2?" ✓":"")));
   wrap.appendChild(head);
 
   var nav=el("div",{style:"display:flex;gap:10px;padding:0 16px 7px;"});
@@ -982,7 +1154,7 @@ function HomeScreen(){
     ])], navCard+"border:1.5px solid rgba(106,27,154,0.35);", function(){go("tuner");});
   var b2=btn([el("div",{style:"font-size:21px;"},"📊"),el("div",{style:"text-align:left;"},[
       el("div",{style:"font-size:13.5px;font-weight:800;color:#0a0a0a;line-height:1.15;"},"Historial"),
-      el("div",{style:"font-size:10px;color:#5a6899;"},state.log.length+(state.log.length===1?" sesión":" sesiones"))
+      el("div",{style:"font-size:10px;color:#5a6899;"},state.log.length+(isEN()?((state.log.length===1?" session":" sessions")):((state.log.length===1?" sesión":" sesiones"))))
     ])], navCard+"border:1.5px solid rgba(13,71,161,0.35);", function(){go("history");});
   nav.appendChild(b1); nav.appendChild(b2);
   wrap.appendChild(nav);
@@ -992,7 +1164,7 @@ function HomeScreen(){
   var carryDone=state.settings.carryDone===todayKey;
   var carryWrap=el("div",{style:"padding:0 16px 7px;"});
   carryWrap.appendChild(btn([
-    el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(carryDone?"#2e7d32":"#e65100")+";text-transform:uppercase;font-weight:800;margin-bottom:4px;text-align:left;"},(carryDone?"✓ HECHA · ":"🎯 ")+"TAREA DE HOY · VOZ FUERTE EN LA VIDA REAL"),
+    el("div",{style:"font-size:10px;letter-spacing:2px;color:"+(carryDone?"#2e7d32":"#e65100")+";text-transform:uppercase;font-weight:800;margin-bottom:4px;text-align:left;"},(carryDone?tt("✓ HECHA · ","✓ DONE · "):"🎯 ")+tt("TAREA DE HOY · VOZ FUERTE EN LA VIDA REAL","TODAY'S TASK · LOUD VOICE IN REAL LIFE")),
     el("div",{style:"font-size:13.5px;color:"+(carryDone?"#5a6899":"#0a0a0a")+";line-height:1.35;text-align:left;font-weight:600;"+(carryDone?"text-decoration:line-through;":"")},todayCarryover())
   ],"width:100%;background:"+(carryDone?"rgba(46,125,50,0.06)":"rgba(230,81,0,0.07)")+";border:1.5px solid "+(carryDone?"rgba(46,125,50,0.3)":"rgba(230,81,0,0.35)")+";border-radius:16px;padding:8px 14px;color:#0a0a0a;", function(){
     state.settings.carryDone = carryDone ? "" : todayKey;
@@ -1016,7 +1188,7 @@ function HomeScreen(){
       el("div",{style:"flex:1;min-width:0;"},[
         el("div",{style:"font-size:9.5px;letter-spacing:1.5px;color:"+(isDone?e.color:"#5a6899")+";text-transform:uppercase;"},e.label),
         el("div",{style:"font-size:16.5px;font-weight:800;line-height:1.15;"},e.name),
-        el("div",{style:"font-size:11.5px;color:#5a6899;margin-top:1px;"}, e.type==="sustain"?(exReps(e)+" reps · meta "+exTarget(e)+"s"):e.type==="phrases"?(exReps(e)+" ciclos · "+exTotal(e)+" frases"):e.type==="reading"?"1 párrafo · 5 min":"5 min de charla")
+        el("div",{style:"font-size:11.5px;color:#5a6899;margin-top:1px;"}, e.type==="sustain"?(exReps(e)+tt(" reps · meta "," reps · goal ")+exTarget(e)+"s"):e.type==="phrases"?(exReps(e)+tt(" ciclos · "," rounds · ")+exTotal(e)+tt(" frases"," phrases")):e.type==="reading"?tt("1 párrafo · 5 min","1 passage · 5 min"):tt("5 min de charla","5 min of talking"))
       ]),
       rightEl
     ], "display:flex;align-items:center;gap:12px;background:"+(isDone?e.color+"10":"#ffffff")+";border:1.5px solid "+(isDone?e.color+"55":"rgba(26,35,126,0.09)")+";border-radius:15px;padding:5px 14px;color:#0a0a0a;width:100%;text-align:left;", function(){ openEx(i); });
@@ -1027,7 +1199,7 @@ function HomeScreen(){
 
   var foot=el("div",{style:"text-align:center;padding:6px 24px calc(env(safe-area-inset-bottom) + 8px);"});
   foot.appendChild(btn("Reiniciar sesión de hoy","background:none;border:1px solid rgba(26,35,126,0.11);border-radius:10px;padding:8px 22px;color:#5a6899;font-size:13px;", newSession));
-  foot.appendChild(el("div",{style:"margin-top:6px;font-size:8.5px;color:#93a0c8;line-height:1.5;"},"Complemento del tratamiento LSVT LOUD® con terapeuta certificado · requiere cuerdas vocales sanas (valoración ORL) · "+APP_VER));
+  foot.appendChild(el("div",{style:"margin-top:6px;font-size:8.5px;color:#93a0c8;line-height:1.5;"},tt("Complemento del tratamiento LSVT LOUD® con terapeuta certificado · requiere cuerdas vocales sanas (valoración ORL) · ","A companion to LSVT LOUD® treatment with a certified therapist · requires healthy vocal cords (ENT evaluation) · ")+APP_VER));
   wrap.appendChild(foot);
   return wrap;
 }
@@ -1096,7 +1268,7 @@ function liveGraphSVG(history, targetDb, ex){
   svg+='</svg>';
 
   var box=el("div",{style:"background:#ffffff;border-radius:16px;border:1px solid rgba(26,35,126,0.12);padding:10px 10px 8px;width:100%;"});
-  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:0 2px 4px;"},[el("span",null,"🔊 VOLUMEN (dB)"),el("span",{style:"color:#2e7d32;"},"■ rango "+targetDb+"–90")]));
+  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:0 2px 4px;"},[el("span",null,"🔊 VOLUMEN (dB)"),el("span",{style:"color:#2e7d32;"},tt("■ rango ","■ range ")+targetDb+"–90")]));
   box.appendChild(el("div",{html:svg}));
 
   // Carril de tono: solo si el ejercicio tiene zona de tono (frases es solo volumen).
@@ -1114,7 +1286,7 @@ function liveGraphSVG(history, targetDb, ex){
     seg.forEach(function(sp){ svg2+='<polyline points="'+sp+'" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
     if(last&&last.mf!=null) svg2+='<circle cx="'+X(history.length-1)+'" cy="'+pY(last.mf)+'" r="3.8" fill="#6a1b9a"/>';
     svg2+='</svg>';
-    box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:8px 2px 4px;border-top:1px solid rgba(26,35,126,0.07);margin-top:6px;"},[el("span",null,"♪ TONO"),el("span",{style:"color:"+ex.color+";"},"■ "+z2.label)]));
+    box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:8px 2px 4px;border-top:1px solid rgba(26,35,126,0.07);margin-top:6px;"},[el("span",null,"♪ TONO"),el("span",{style:"color:"+ex.color+";"},"■ "+trs(z2.label))]));
     box.appendChild(el("div",{html:svg2}));
   }
   return box;
@@ -1131,7 +1303,7 @@ function SustainScreen(){
   header.appendChild(btn("‹",BACK_BTN,goHome));
   header.appendChild(el("div",{style:"flex:1;"},[
     el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},ex.name),
-    el("div",{style:"font-size:14px;color:#5a6899;"},"Repetición "+(state.rep+1)+" de "+exReps(ex))
+    el("div",{style:"font-size:14px;color:#5a6899;"},tt("Repetición ","Repetition ")+(state.rep+1)+tt(" de "," of ")+exReps(ex))
   ]));
   var pauseBtn=btn([el("span",{style:"font-size:15px;"},"⏸"),el("span",{style:"font-size:13px;font-weight:800;margin-left:4px;"},"💧")],
     "background:rgba(13,71,161,0.12);border:1.5px solid rgba(13,71,161,0.55);border-radius:12px;padding:8px 11px;color:#0d47a1;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;",
@@ -1145,7 +1317,7 @@ function SustainScreen(){
 
   if(state.micError){
     var errBox=el("div",{style:"margin:4px 16px 6px;background:rgba(230,81,0,0.08);border:1px solid rgba(230,81,0,0.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#e65100;line-height:1.6;"});
-    errBox.appendChild(el("div",{html:"⚠️ "+state.micError+" El cronómetro funciona sin micrófono."}));
+    errBox.appendChild(el("div",{html:"⚠️ "+trs(state.micError)+tt(" El cronómetro funciona sin micrófono."," The timer works without a microphone.")}));
     errBox.appendChild(btn("🔄 Reintentar","display:block;margin-top:8px;background:rgba(230,81,0,0.15);border:1px solid rgba(230,81,0,0.5);border-radius:8px;padding:7px 14px;color:#e65100;font-weight:800;font-size:12px;",function(){ startMic(function(){}); }));
     wrap.appendChild(errBox);
   }
@@ -1184,8 +1356,8 @@ function SustainScreen(){
   rowTop.appendChild(thermo);
 
   var right=el("div",{style:"flex:1;display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:0;"});
-  right.appendChild(el("div",{style:"font-size:11px;font-weight:800;color:"+ex.color+";letter-spacing:2px;"},"VOCALIZA: "+ex.vowel));
-  if(state.zoneNow) right.appendChild(el("div",{style:"font-size:10px;font-weight:700;color:#5a6899;letter-spacing:0.5px;"},"♪ "+state.zoneNow.label));
+  right.appendChild(el("div",{style:"font-size:11px;font-weight:800;color:"+ex.color+";letter-spacing:2px;"},tt("VOCALIZA: ","SAY: ")+ex.vowel));
+  if(state.zoneNow) right.appendChild(el("div",{style:"font-size:10px;font-weight:700;color:#5a6899;letter-spacing:0.5px;"},"♪ "+trs(state.zoneNow.label)));
   var dbRow=el("div",{id:"dbRow",style:"display:flex;align-items:baseline;gap:5px;"});
   right.appendChild(dbRow);
   var zoneLine=el("div",{id:"zoneLine",style:"font-size:14px;font-weight:900;letter-spacing:0.5px;min-height:18px;"});
@@ -1282,7 +1454,7 @@ function updateConvDOM(){
   var zone=dbZone(r?r.db:null, td);
   _convNodes.dbNum.textContent=(state.micOn&&r&&r.db>=45)?String(r.db):"——";
   _convNodes.dbNum.style.color=(state.micOn&&zone.key!=="silent")?zone.color:"#c7cee6";
-  _convNodes.zoneLine.textContent=state.micOn?(zone.label+(zone.msg?" · "+zone.msg:"")):"🎤 se activa al comenzar";
+  _convNodes.zoneLine.textContent=state.micOn?(trs(zone.label)+(zone.msg?" · "+trs(zone.msg):"")):trs("🎤 se activa al comenzar");
   _convNodes.zoneLine.style.color=state.micOn?zone.color:"#93a0c8";
 }
 function updateLiveDOM(){
@@ -1294,7 +1466,7 @@ function updateLiveDOM(){
   _liveNodes.dbRow.innerHTML="";
   _liveNodes.dbRow.appendChild(el("div",{style:"font-size:58px;font-weight:900;line-height:1;letter-spacing:-3px;color:"+((state.micOn&&zone.key!=="silent")?zone.color:"#c7cee6")+";"}, (state.micOn&&r&&r.db>=45)?String(r.db):"——"));
   _liveNodes.dbRow.appendChild(el("div",{style:"font-size:13px;color:#5a6899;font-weight:800;"},"dB"));
-  _liveNodes.zoneLine.textContent=state.micOn?(zone.label+(zone.msg?" · "+zone.msg:"")):"🎤 apagado";
+  _liveNodes.zoneLine.textContent=state.micOn?(trs(zone.label)+(zone.msg?" · "+trs(zone.msg):"")):trs("🎤 apagado");
   _liveNodes.zoneLine.style.color=state.micOn?zone.color:"#93a0c8";
   _liveNodes.zoneLine.style.animation=(state.micOn&&state.running&&zone.key==="low")?"blink 1s ease infinite":"none";
   if(_liveNodes.noteLine){
@@ -1307,7 +1479,7 @@ function updateLiveDOM(){
   var hit=hasTarget && state.sec>=state.targetNow;
   _liveNodes.timerEl.textContent=fmtTime(state.sec);
   _liveNodes.timerEl.style.color=hit?"#2e7d32":state.running?"#0a0a0a":"#c7cee6";
-  _liveNodes.metaLine.textContent=(state.running&&state.waitingVoice)?"🎤 EL RELOJ ARRANCA CON TU VOZ":hasTarget?(hit?"✓ META DE TIEMPO":("META: "+state.targetNow+"s · "+td+" dB")):("OBJETIVO: "+td+" dB · mide tu volumen");
+  _liveNodes.metaLine.textContent=(state.running&&state.waitingVoice)?trs("🎤 EL RELOJ ARRANCA CON TU VOZ"):hasTarget?(hit?trs("✓ META DE TIEMPO"):(tt("META: ","GOAL: ")+state.targetNow+"s · "+td+" dB")):(tt("OBJETIVO: ","TARGET: ")+td+tt(" dB · mide tu volumen"," dB · measure your volume"));
   _liveNodes.metaLine.style.color=hit?"#2e7d32":"#93a0c8";
   if(_liveNodes.graph && state.micOn){
     _liveNodes.graph.innerHTML="";
@@ -1325,7 +1497,7 @@ function updateLiveDOM(){
     }
   }
 }
-function updateTimer(){ if(_liveNodes.timerEl){ var hasTarget=state.targetNow!=null; var hit=hasTarget&&state.sec>=state.targetNow; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#2e7d32":state.running?"#0a0a0a":"#c7cee6"; _liveNodes.metaLine.textContent=(state.running&&state.waitingVoice)?"🎤 EL RELOJ ARRANCA CON TU VOZ":hasTarget?(hit?"✓ META DE TIEMPO":("META: "+state.targetNow+"s · "+state.settings.targetDb+" dB")):("OBJETIVO: "+state.settings.targetDb+" dB · mide tu volumen"); _liveNodes.metaLine.style.color=hit?"#2e7d32":"#93a0c8"; } }
+function updateTimer(){ if(_liveNodes.timerEl){ var hasTarget=state.targetNow!=null; var hit=hasTarget&&state.sec>=state.targetNow; _liveNodes.timerEl.textContent=fmtTime(state.sec); _liveNodes.timerEl.style.color=hit?"#2e7d32":state.running?"#0a0a0a":"#c7cee6"; _liveNodes.metaLine.textContent=(state.running&&state.waitingVoice)?trs("🎤 EL RELOJ ARRANCA CON TU VOZ"):hasTarget?(hit?trs("✓ META DE TIEMPO"):(tt("META: ","GOAL: ")+state.targetNow+"s · "+state.settings.targetDb+" dB")):(tt("OBJETIVO: ","TARGET: ")+state.settings.targetDb+tt(" dB · mide tu volumen"," dB · measure your volume")); _liveNodes.metaLine.style.color=hit?"#2e7d32":"#93a0c8"; } }
 
 /* ─────────── Frases ─────────── */
 function PhraseScreen(){
@@ -1340,7 +1512,7 @@ function PhraseScreen(){
   // header
   var header=el("div",{style:"display:flex;align-items:center;gap:12px;padding:48px 20px 8px;"});
   header.appendChild(btn("‹",BACK_BTN,goHome));
-  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#5a6899;"},"Ciclo "+cycleNum+"/"+cycles+" · Frase "+(idxInCycle+1)+"/"+perCycle)]));
+  header.appendChild(el("div",{style:"flex:1;"},[el("div",{style:"font-size:10px;letter-spacing:3px;color:"+ex.color+";text-transform:uppercase;margin-bottom:2px;"},"FRASES FUNCIONALES"),el("div",{style:"font-size:14px;color:#5a6899;"},tt("Ciclo ","Round ")+cycleNum+"/"+cycles+tt(" · Frase "," · Phrase ")+(idxInCycle+1)+"/"+perCycle)]));
   header.appendChild(btn([el("span",{style:"font-size:15px;"},"⏸"),el("span",{style:"font-size:13px;font-weight:800;margin-left:4px;"},"💧")],
     "background:rgba(13,71,161,0.12);border:1.5px solid rgba(13,71,161,0.55);border-radius:12px;padding:8px 11px;color:#0d47a1;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;", pauseSession));
   header.appendChild(btn(state.micOn?"🎤 ON":"🎤 Medir",
@@ -1401,7 +1573,7 @@ function PhraseScreen(){
 
   // frase a leer
   var carta=el("div",{class:"card",style:"margin-top:10px;background:#ffffff;border-radius:18px;border:1.5px solid "+ex.color+"40;padding:18px 20px;"});
-  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#0a0a0a;line-height:1.45;text-align:center;"},'"'+exPhrases(ex)[idxInCycle]+'"'));
+  carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#0a0a0a;line-height:1.45;text-align:center;"},'"'+trs(exPhrases(ex)[idxInCycle])+'"'));
   body.appendChild(carta);
 
   if(!state.micOn && !state.micError){
@@ -1496,7 +1668,7 @@ function updateReadDOM(){
   if(!_readDbNode) return;
   var r=state.reading;
   var speaking = state.readSoundTs && (performance.now()-state.readSoundTs)<450;
-  _readDbNode.textContent = (r&&r.db>=45 ? r.db+" dB" : "— dB") + (speaking ? " · 🎙️ te escucho" : " · 🤫 no oigo voz");
+  _readDbNode.textContent = (r&&r.db>=45 ? r.db+" dB" : "— dB") + (speaking ? tt(" · 🎙️ te escucho"," · 🎙️ I hear you") : tt(" · 🤫 no oigo voz"," · 🤫 no voice heard"));
   _readDbNode.style.color = speaking ? "#2e7d32" : "#93a0c8";
 }
 var READ_FADE_OPACITY="0.18";
@@ -1504,7 +1676,8 @@ var READ_FADE_OPACITY="0.18";
 function nextReading(){
   var d=new Date();
   var doy=Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);
-  return READINGS[doy%READINGS.length];
+  var RS=isEN()?READINGS_EN:READINGS;
+  return RS[doy%RS.length];
 }
 function readStart(){
   if(state.readRunning || state.readSec<=0) return;
@@ -1597,7 +1770,7 @@ function shareReadRecording(){
     var file=new File([state.recBlob], fname, {type:state.recMime});
     if(navigator.canShare && navigator.canShare({files:[file]})){
       var esConv=EXERCISES[state.exIdx]&&EXERCISES[state.exIdx].type==="conversation";
-      navigator.share({files:[file], title:(esConv?"Conversación":"Lectura")+" — Practica tu voz", text:"Grabación de mi ejercicio de "+(esConv?"conversación":"lectura en voz alta")+" (Practica tu voz)."}).catch(function(){});
+      navigator.share({files:[file], title:(esConv?tt("Conversación","Conversation"):tt("Lectura","Reading"))+tt(" — Practica tu voz"," — Practice Your Voice"), text:tt("Grabación de mi ejercicio de ","Recording of my ")+(esConv?tt("conversación","conversation"):tt("lectura en voz alta","read-aloud"))+tt(" (Practica tu voz)."," exercise (Practice Your Voice).")}).catch(function(){});
       return;
     }
   }catch(e){}
@@ -1629,7 +1802,7 @@ function ReadScreen(){
   _readNode=t; tbox.appendChild(t);
   if(!running && !state.recStarted) tbox.appendChild(btn("▶  Comenzar y grabar","margin-top:12px;border:none;border-radius:14px;padding:12px 30px;font-size:15px;font-weight:800;color:#fff;background:"+ex.color+";",readStart));
   else if(running){
-    tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#c62828;font-weight:800;"},(state.recording?"🔴 Grabando… ":"")+"¡mantén la voz FUERTE!"));
+    tbox.appendChild(el("div",{class:"card",style:"margin-top:8px;font-size:12.5px;color:#c62828;font-weight:800;"},(state.recording?tt("🔴 Grabando… ","🔴 Recording… "):"")+tt("¡mantén la voz FUERTE!","keep your voice LOUD!")));
     var rdb=el("div",{style:"margin-top:5px;font-size:13.5px;font-weight:800;color:#93a0c8;"},"— dB · esperando tu voz…");
     _readDbNode=rdb; tbox.appendChild(rdb);
   }
@@ -1637,12 +1810,12 @@ function ReadScreen(){
   // Ritmo del guía de lectura: ajustable en cualquier momento, con botones grandes (se guarda).
   if(!done){
     var pbs="width:42px;height:42px;border-radius:12px;border:1px solid rgba(26,35,126,0.17);background:rgba(26,35,126,0.08);color:#0a0a0a;font-size:22px;font-weight:800;line-height:1;flex-shrink:0;";
-    var paceLbl=el("div",{style:"min-width:150px;text-align:center;font-size:12px;font-weight:800;color:#5a6899;letter-spacing:0.5px;"},"GUÍA: "+(state.settings.readWpm||160)+" palabras/min");
+    var paceLbl=el("div",{style:"min-width:150px;text-align:center;font-size:12px;font-weight:800;color:#5a6899;letter-spacing:0.5px;"},tt("GUÍA: ","PACE: ")+(state.settings.readWpm||160)+tt(" palabras/min"," words/min"));
     function setWpm(d){
       state.settings.readWpm=clamp((state.settings.readWpm||160)+d,60,260);
       saveSettings(state.settings);
       _readWords.rate=state.settings.readWpm/60;
-      paceLbl.textContent="GUÍA: "+state.settings.readWpm+" palabras/min";
+      paceLbl.textContent=tt("GUÍA: ","PACE: ")+state.settings.readWpm+tt(" palabras/min"," words/min");
     }
     var paceRow=el("div",{style:"display:flex;align-items:center;justify-content:center;gap:12px;margin-top:8px;"});
     paceRow.appendChild(btn("−",pbs,function(){ setWpm(-20); }));
@@ -1655,7 +1828,7 @@ function ReadScreen(){
 
   var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:0 20px;"});
   if(!running && !state.recStarted){
-    body.appendChild(btn("✏️  Usar mi propio texto"+(state.settings.myReading?" ✓":""),
+    body.appendChild(btn(tt("✏️  Usar mi propio texto","✏️  Use my own text")+(state.settings.myReading?" ✓":""),
       "width:100%;margin-bottom:10px;background:rgba(198,40,40,0.06);border:1.5px solid rgba(198,40,40,0.35);border-radius:14px;padding:11px;color:#c62828;font-size:13.5px;font-weight:800;",
       function(){ state.editReading=true; render(); }));
   }
@@ -1785,9 +1958,9 @@ function ConvScreen(){
   var body=el("div",{style:"flex:1;display:flex;flex-direction:column;padding:6px 20px 0;"});
   body.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";margin-bottom:10px;font-weight:700;text-align:center;"},"🗣️ CON ALGUIEN, POR TELÉFONO, O GRÁBATE RESPONDIENDO"));
   var carta=el("div",{class:"card",style:"background:#ffffff;border-radius:20px;border:1.5px solid "+ex.color+"30;padding:20px 22px;"});
-  carta.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";text-transform:uppercase;font-weight:800;margin-bottom:12px;text-align:center;"},"Tema: "+topic.t));
+  carta.appendChild(el("div",{style:"font-size:11px;letter-spacing:2px;color:"+ex.color+";text-transform:uppercase;font-weight:800;margin-bottom:12px;text-align:center;"},tt("Tema: ","Topic: ")+trs(topic.t)));
   topic.q.forEach(function(q){
-    carta.appendChild(el("div",{style:"font-size:18px;color:#0a0a0a;line-height:1.6;margin-bottom:12px;font-weight:600;"},"• "+q));
+    carta.appendChild(el("div",{style:"font-size:18px;color:#0a0a0a;line-height:1.6;margin-bottom:12px;font-weight:600;"},"• "+trs(q)));
   });
   body.appendChild(carta);
   if(!running && !state.recStarted){
@@ -1810,7 +1983,7 @@ function ConvScreen(){
     if(state.convStats){
       var cs=state.convStats;
       foot.appendChild(el("div",{style:"text-align:center;font-size:13px;color:#5a6899;margin-bottom:10px;font-weight:700;"},
-        "Promedio "+cs.avgDb+" dB · máx "+cs.maxDb+" dB · "+cs.pctDb+"% en rango"));
+        tt("Promedio ","Average ")+cs.avgDb+tt(" dB · máx "," dB · max ")+cs.maxDb+" dB · "+cs.pctDb+tt("% en rango","% in range")));
     }
     if(state.recURL) foot.appendChild(el("audio",{src:state.recURL,controls:"controls",style:"width:100%;margin-bottom:12px;"}));
     foot.appendChild(btn("📤  Enviar al médico (WhatsApp)", BIG_BTN+"background:#25D366;color:#04310f;", shareReadRecording));
@@ -1844,7 +2017,7 @@ function DoneScreen(){
   card.appendChild(scoreDimRow("Esfuerzo", agg.esfuerzo));
   wrap.appendChild(card);
 
-  wrap.appendChild(el("div",{style:"font-size:13px;color:#5a6899;line-height:1.9;margin-bottom:18px;",html:"<span style='color:#0d47a1;font-weight:700;'>✓ Guardado en tu historial</span><br><span style='color:#2e7d32;font-weight:800;'>¡PIENSA SIEMPRE FUERTE!</span>"}));
+  wrap.appendChild(el("div",{style:"font-size:13px;color:#5a6899;line-height:1.9;margin-bottom:18px;",html:"<span style='color:#0d47a1;font-weight:700;'>"+tt("✓ Guardado en tu historial","✓ Saved to your history")+"</span><br><span style='color:#2e7d32;font-weight:800;'>"+tt("¡PIENSA SIEMPRE FUERTE!","ALWAYS THINK LOUD!")+"</span>"}));
 
   var box=el("div",{style:"display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;"});
   box.appendChild(btn("📊 Ver mi historial", BIG_BTN+"background:#ffffff;color:#0d47a1;border:1.5px solid rgba(13,71,161,0.4);font-size:16px;padding:16px;", function(){go("history");}));
@@ -1858,17 +2031,17 @@ function DoneScreen(){
 function progressSummary(){
   var streak=computeStreak(state.log);
   var lines=["📈 Mi progreso — Practica tu voz",
-    "Sesiones: "+state.log.length+" · Racha: "+streak+(streak===1?" día":" días"),""];
+    tt("Sesiones: ","Sessions: ")+state.log.length+tt(" · Racha: "," · Streak: ")+streak+(isEN()?((streak===1?" day":" days")):((streak===1?" día":" días"))),""];
   state.log.slice().sort(function(a,b){return b.id-a.id;}).slice(0,20).forEach(function(s){
     var d=new Date(s.date), exs=s.exercises||{}, agg=aggScores(exs);
-    var line="• "+d.toLocaleDateString("es-MX",{day:"numeric",month:"short"})+" "
+    var line="• "+d.toLocaleDateString(tt("es-MX","en-US"),{day:"numeric",month:"short"})+" "
       +d.toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"})
       +" — "+Object.keys(exs).length+"/"+EXERCISES.length+" ejercicios";
     if(agg.overall!=null) line+=" — "+agg.overall+" pts ("+scoreLabel(agg.overall).txt+")";
     if(exs[0]){ line+=" — AHHH "+exs[0].avg+"s"; if(exs[0].avgDb) line+=" · "+exs[0].avgDb+" dB"; }
     lines.push(line);
   });
-  if(state.log.length>20) lines.push("… y "+(state.log.length-20)+" sesiones más");
+  if(state.log.length>20) lines.push(tt("… y ","… and ")+(state.log.length-20)+tt(" sesiones más"," more sessions"));
   return lines.join("\n");
 }
 function shareProgress(){
@@ -1899,7 +2072,7 @@ function chartCard(title, note, data, mn, mx, goal, color){
     ]));
   });
   box.appendChild(bars);
-  box.appendChild(el("div",{style:"font-size:9.5px;color:#93a0c8;margin-top:8px;text-align:center;"},note+" · Últimas "+data.length+" sesiones"));
+  box.appendChild(el("div",{style:"font-size:9.5px;color:#93a0c8;margin-top:8px;text-align:center;"},trs(note)+tt(" · Últimas "," · Last ")+data.length+tt(" sesiones"," sessions")));
   return box;
 }
 function HistoryScreen(){
@@ -1920,7 +2093,7 @@ function HistoryScreen(){
   var secData=state.log.filter(function(s){return s.exercises&&s.exercises[0];}).sort(function(a,b){return a.id-b.id;}).slice(-12);
   var dbData=state.log.filter(function(s){return s.exercises&&s.exercises[0]&&s.exercises[0].avgDb;}).sort(function(a,b){return a.id-b.id;}).slice(-12);
   if(secData.length) wrap.appendChild(chartCard("⏱ Duración promedio AHHH (seg)","Verde = meta de 8s alcanzada",secData.map(function(s){return {v:s.exercises[0].avg};}),0,15,8,"#0d47a1"));
-  if(dbData.length) wrap.appendChild(chartCard("🔊 Volumen promedio AHHH (dB)","Verde = meta de "+state.settings.targetDb+" dB",dbData.map(function(s){return {v:s.exercises[0].avgDb};}),55,100,state.settings.targetDb,"#6a1b9a"));
+  if(dbData.length) wrap.appendChild(chartCard("🔊 Volumen promedio AHHH (dB)",tt("Verde = meta de ","Green = goal of ")+state.settings.targetDb+" dB",dbData.map(function(s){return {v:s.exercises[0].avgDb};}),55,100,state.settings.targetDb,"#6a1b9a"));
 
   var list=el("div",{style:"flex:1;padding:0 16px;display:flex;flex-direction:column;gap:8px;"});
   var sorted=state.log.slice().sort(function(a,b){return b.id-a.id;});
@@ -1930,7 +2103,7 @@ function HistoryScreen(){
   sorted.forEach(function(s){
     var exs=s.exercises||{}, count=Object.keys(exs).length, complete=count>=EXERCISES.length;
     var d=new Date(s.date);
-    var fdate=d.toLocaleDateString("es-MX",{weekday:"short",day:"numeric",month:"short"});
+    var fdate=d.toLocaleDateString(tt("es-MX","en-US"),{weekday:"short",day:"numeric",month:"short"});
     var fhour=d.toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
     var parts=[];
     if(exs[0]){ var p="AHHH "+exs[0].avg+"s"; if(exs[0].avgDb) p+=" · "+exs[0].avgDb+" dB"; if(exs[0].pctDb!=null) p+=" · "+exs[0].pctDb+"% rango"; parts.push(p); }
@@ -1963,7 +2136,7 @@ function HistoryScreen(){
     foot.appendChild(btn("📤  Compartir mi progreso","width:100%;max-width:300px;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;color:#04310f;background:#25D366;", shareProgress));
     foot.appendChild(btn("⬇ Respaldar datos (JSON)","width:100%;max-width:300px;background:#ffffff;border:1.5px solid rgba(26,35,126,0.15);border-radius:14px;padding:12px;color:#5a6899;font-size:13px;font-weight:700;", downloadBackup));
     foot.appendChild(btn("Borrar historial","background:none;border:1px solid rgba(198,40,40,0.25);border-radius:10px;padding:10px 24px;color:#c62828;font-size:13px;", function(){
-      if(confirm("¿Borrar todo el historial? Esta acción no se puede deshacer.")){ state.log=[]; saveLog(state.log); state.sessionId=null; render(); }
+      if(confirm(tt("¿Borrar todo el historial? Esta acción no se puede deshacer.","Delete all history? This cannot be undone."))){ state.log=[]; saveLog(state.log); state.sessionId=null; render(); }
     }));
     wrap.appendChild(foot);
   }
