@@ -31,7 +31,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v32";
+var APP_VER="v33";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -906,10 +906,11 @@ function repDone(){
     if((state.rep+1)%perCycle===0){ showCycleSummary(false); }
     else { phraseNext(); }
   } else {
-    // Sostenidos: ¿alcanzó la meta de tiempo? felicita; si no (cerró con ✓ LISTO antes), anima a mejorar.
+    // Sostenidos: SIGUIENTE repetición directa, sin pausa (el respiro lo dan el silencio
+    // de cierre y el GO!). El registro de la rep queda en los puntos y las estadísticas.
     state.lastRepHitMeta = (state.targetNow!=null && state.sec>=state.targetNow);
     state.lastRep={sec:state.sec, db:audio?audio.maxDb:null, cue:SENSE_CUES[state.rep%SENSE_CUES.length]};
-    startPhraseGap();   // 3s de descanso y arranca sola la siguiente rep (phraseNext: rep++, sec=0, tickStart)
+    phraseNext();
   }
 }
 
