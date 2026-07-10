@@ -31,7 +31,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v31";
+var APP_VER="v32";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -808,8 +808,8 @@ function pauseOverlay(){
 /* ─────────── Cronómetro ─────────── */
 // Fin por silencio tras oír la voz: frases 2 s; sostenidos 3.5 s.
 var PHRASE_END_SILENCE_MS=2000, SUSTAIN_END_SILENCE_MS=3500;
-// "GO!": se despliega 2 s después de mostrar la repetición para indicar cuándo empezar.
-var GO_DELAY_MS=2000;
+// "GO!": se despliega 1 s después de mostrar la repetición para indicar cuándo empezar.
+var GO_DELAY_MS=1000;
 function flashGo(){
   try{
     var g=el("div",{style:"position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;font-size:100px;font-weight:900;color:#2e7d32;background:rgba(238,241,250,0.72);letter-spacing:3px;pointer-events:none;animation:goPop 1.1s ease forwards;"},"GO!");
@@ -900,10 +900,11 @@ function repDone(){
     if(ex.type==="phrases"){ showCycleSummary(true); }   // calificación de la última ronda; TERMINAR cierra
     else finishEx(ex.id);
   } else if(ex.type==="phrases"){
-    // ¿Terminó la ronda de 10 frases? → calificación 0–10 (y descanso); si no, pausa de 3s y sigue.
+    // ¿Terminó la ronda de 10 frases? → calificación 0–10 (y descanso); si no, SIGUIENTE FRASE
+    // directa, sin pausa numerada (el respiro natural lo dan el silencio de cierre y el GO!).
     var perCycle=exPhrases(ex).length;            // 10
     if((state.rep+1)%perCycle===0){ showCycleSummary(false); }
-    else { startPhraseGap(); }                             // 3s y avanza sola
+    else { phraseNext(); }
   } else {
     // Sostenidos: ¿alcanzó la meta de tiempo? felicita; si no (cerró con ✓ LISTO antes), anima a mejorar.
     state.lastRepHitMeta = (state.targetNow!=null && state.sec>=state.targetNow);
