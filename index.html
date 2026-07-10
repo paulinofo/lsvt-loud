@@ -20,6 +20,7 @@
   @keyframes ring { to { transform: scale(2.6); opacity: 0; } }
   @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
   @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes goPop { 0%{opacity:0;transform:scale(0.6);} 20%{opacity:1;transform:scale(1.1);} 65%{opacity:1;transform:scale(1);} 100%{opacity:0;transform:scale(1.05);} }
   .card { animation: fadeUp 0.3s ease both; }
 </style>
 </head>
@@ -30,7 +31,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v30";
+var APP_VER="v31";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -463,12 +464,14 @@ function startMic(cb){
             var ez=state.zoneNow||EXERCISES[state.exIdx].zone;
             if(ez){ state.repSamples.ztot++; if(inZone(s.mf,ez)) state.repSamples.zin++; }
           }
-          // FRASES: al terminar de decir la frase, 2 s de silencio continuo la dan por terminada.
+          // Fin por silencio tras oír la voz: cierra la repetición y avanza solo.
+          // Frases: 2 s. Sostenidos: 3.5 s (ventana amplia + detección relativa, para que una
+          // voz débil que baja no se confunda con "callar").
           // "Silencio" con umbral ADAPTATIVO: por debajo de 2× el ruido ambiente del cuarto y del
           // 18% del pico de la voz (un umbral fijo falla: el ambiente real nunca es silencio digital).
-          // (Solo frases: en los sostenidos NO se cierra por silencio — una voz débil que baja se
-          //  confundía con "callar" y cortaba antes de tiempo; ahí cierra la meta o ✓ LISTO.)
-          if(EXERCISES[state.exIdx].type==="phrases" && !state.waitingVoice){
+          var _exT=EXERCISES[state.exIdx].type;
+          var _endSil=(_exT==="phrases")?PHRASE_END_SILENCE_MS:(_exT==="sustain")?SUSTAIN_END_SILENCE_MS:0;
+          if(_endSil && !state.waitingVoice){
             if(res.rms>state.phrasePeakRms) state.phrasePeakRms=res.rms;
             var gate=Math.max(0.004, state.noiseFloorRms*2, state.phrasePeakRms*0.18);
             var makingSound = s.voiced || res.rms>=gate;
@@ -477,7 +480,7 @@ function startMic(cb){
               if(++state.soundFrames>=3) state.heardSound=true;   // ~200 ms de voz real: ignora clics sueltos
             } else {
               state.soundFrames=0;
-              if(state.heardSound && (ts-state.lastSoundTs)>=PHRASE_END_SILENCE_MS){ repDone(); }
+              if(state.heardSound && (ts-state.lastSoundTs)>=_endSil){ repDone(); }
             }
           }
         }
@@ -568,7 +571,7 @@ document.addEventListener("visibilitychange", function(){
 function dbZone(db, targetDb){
   if(db==null || db<52) return {key:"silent",label:"· · · VOCALIZA",color:"#93a0c8",msg:""};
   if(db<targetDb) return {key:"low",label:"⬇ BAJO",color:"#e65100",msg:"¡MÁS FUERTE!"};
-  if(db<=targetDb+15) return {key:"ok",label:"✓ EN RANGO",color:"#2e7d32",msg:"¡MANTÉN ASÍ!"};
+  if(db<=90) return {key:"ok",label:"✓ EN RANGO",color:"#2e7d32",msg:"¡MANTÉN ASÍ!"};   // zona verde: meta a 90 dB
   return {key:"high",label:"⬆ MUY FUERTE",color:"#6a1b9a",msg:"potente — sin tensar"};
 }
 function pitchStatus(mf, z){
@@ -803,8 +806,17 @@ function pauseOverlay(){
 }
 
 /* ─────────── Cronómetro ─────────── */
-// Frases: tras oír la frase, este silencio continuo (ms) la da por terminada.
-var PHRASE_END_SILENCE_MS=2000;
+// Fin por silencio tras oír la voz: frases 2 s; sostenidos 3.5 s.
+var PHRASE_END_SILENCE_MS=2000, SUSTAIN_END_SILENCE_MS=3500;
+// "GO!": se despliega 2 s después de mostrar la repetición para indicar cuándo empezar.
+var GO_DELAY_MS=2000;
+function flashGo(){
+  try{
+    var g=el("div",{style:"position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;font-size:100px;font-weight:900;color:#2e7d32;background:rgba(238,241,250,0.72);letter-spacing:3px;pointer-events:none;animation:goPop 1.1s ease forwards;"},"GO!");
+    document.body.appendChild(g);
+    setTimeout(function(){ try{ g.remove(); }catch(e){} }, 1150);
+  }catch(e){}
+}
 function tickStart(){
   // Pedir micrófono PRIMERO, aún dentro del gesto del toque (clave en iOS).
   if(!state.micOn){ startMic(function(ok){
@@ -820,6 +832,8 @@ function tickStart(){
   state.waitingVoice = (_t==="sustain"||_t==="phrases") && !state.micError;
   if(!state.waitingVoice){ startRepTimer(); }
   else {
+    // "GO!" a los 2 s de desplegar la repetición (si aún no has empezado a vocalizar).
+    setTimeout(function(){ if(state.running && state.waitingVoice){ flashGo(); } }, GO_DELAY_MS);
     // Red de seguridad: si el micrófono no llega a conectar (p.ej. permiso colgado), arranca solo.
     setTimeout(function(){ if(state.running && state.waitingVoice && !state.micOn){ state.waitingVoice=false; startRepTimer(); updateTimer(); } }, 4000);
   }
@@ -1045,7 +1059,7 @@ function liveGraphSVG(history, targetDb, ex){
   function pY(mf){ return HP-clamp((mf-pMin)/(pMax-pMin),0,1)*HP; }
   function X(i){ return i/(CAP-1)*W; }
   var last=history.length?history[history.length-1]:null;
-  var okTop=dbY(targetDb+15), okBot=dbY(targetDb);
+  var okTop=dbY(90), okBot=dbY(targetDb);   // zona verde: meta a 90 dB
   var svg='<svg width="100%" height="'+HDB+'" viewBox="0 0 '+W+' '+HDB+'" preserveAspectRatio="none" style="display:block;">';
   svg+='<rect x="0" y="'+okTop+'" width="'+W+'" height="'+Math.max(0,okBot-okTop)+'" fill="rgba(46,125,50,0.14)"/>';
   svg+='<line x1="0" x2="'+W+'" y1="'+okBot+'" y2="'+okBot+'" stroke="#e65100" stroke-width="1.5" stroke-dasharray="5 4"/>';
@@ -1072,7 +1086,7 @@ function liveGraphSVG(history, targetDb, ex){
   svg2+='</svg>';
 
   var box=el("div",{style:"background:#ffffff;border-radius:16px;border:1px solid rgba(26,35,126,0.12);padding:10px 10px 8px;width:100%;"});
-  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:0 2px 4px;"},[el("span",null,"🔊 VOLUMEN (dB)"),el("span",{style:"color:#2e7d32;"},"■ rango "+targetDb+"–"+(targetDb+15))]));
+  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:0 2px 4px;"},[el("span",null,"🔊 VOLUMEN (dB)"),el("span",{style:"color:#2e7d32;"},"■ rango "+targetDb+"–90")]));
   box.appendChild(el("div",{html:svg}));
   box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:8px 2px 4px;border-top:1px solid rgba(26,35,126,0.07);margin-top:6px;"},[el("span",null,"♪ TONO"),el("span",{style:"color:"+ex.color+";"},"■ "+(state.zoneNow||ex.zone).label)]));
   box.appendChild(el("div",{html:svg2}));
@@ -1207,7 +1221,7 @@ function SustainScreen(){
     foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  SIGUIENTE REP", BIG_BTN+"background:"+ex.color+";", tickStart));
   } else {
     var hit=state.targetNow!=null && state.sec>=state.targetNow;
-    foot.appendChild(el("div",{style:"font-size:12px;color:#5a6899;text-align:center;margin-bottom:9px;line-height:1.5;"},"Al llegar a la meta pasa sola a la siguiente · o toca ✓ LISTO"));
+    foot.appendChild(el("div",{style:"font-size:12px;color:#5a6899;text-align:center;margin-bottom:9px;line-height:1.5;"},"Al llegar a la meta o al callar, pasa sola a la siguiente"));
     foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:"+(hit?"#2e7d32":"#5a6899")+";border:2px solid "+(hit?"#2e7d32":"rgba(26,35,126,0.11)")+";", repDone));
   }
   wrap.appendChild(foot);
