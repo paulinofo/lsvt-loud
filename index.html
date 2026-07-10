@@ -30,7 +30,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v29";
+var APP_VER="v30";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -1040,7 +1040,7 @@ function thermometerSVG(db, targetDb, micOn, running){
 /* ─────────── Gráfica en vivo (dB+tono) ─────────── */
 function liveGraphSVG(history, targetDb, ex){
   var W=300,HDB=110,HP=46,CAP=110;
-  function dbY(db){ return HDB-clamp((db-40)/(105-40),0,1)*HDB; }
+  function dbY(db){ return HDB-clamp((db-50)/(100-50),0,1)*HDB; }   // escala de la gráfica: 50–100 dB
   var pMin=33,pMax=78;
   function pY(mf){ return HP-clamp((mf-pMin)/(pMax-pMin),0,1)*HP; }
   function X(i){ return i/(CAP-1)*W; }
@@ -1049,7 +1049,7 @@ function liveGraphSVG(history, targetDb, ex){
   var svg='<svg width="100%" height="'+HDB+'" viewBox="0 0 '+W+' '+HDB+'" preserveAspectRatio="none" style="display:block;">';
   svg+='<rect x="0" y="'+okTop+'" width="'+W+'" height="'+Math.max(0,okBot-okTop)+'" fill="rgba(46,125,50,0.14)"/>';
   svg+='<line x1="0" x2="'+W+'" y1="'+okBot+'" y2="'+okBot+'" stroke="#e65100" stroke-width="1.5" stroke-dasharray="5 4"/>';
-  [60,80,100].forEach(function(g){ svg+='<line x1="0" x2="'+W+'" y1="'+dbY(g)+'" y2="'+dbY(g)+'" stroke="rgba(26,35,126,0.07)"/><text x="3" y="'+(dbY(g)-2.5)+'" font-size="8" fill="#93a0c8" font-weight="700">'+g+'</text>'; });
+  [60,70,80,90].forEach(function(g){ svg+='<line x1="0" x2="'+W+'" y1="'+dbY(g)+'" y2="'+dbY(g)+'" stroke="rgba(26,35,126,0.07)"/><text x="3" y="'+(dbY(g)-2.5)+'" font-size="8" fill="#93a0c8" font-weight="700">'+g+'</text>'; });
   if(history.length>1){
     var pts=history.map(function(h,i){ return X(i).toFixed(1)+","+dbY(h.db).toFixed(1); }).join(" ");
     svg+='<polyline points="'+pts+'" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
