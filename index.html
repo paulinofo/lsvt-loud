@@ -31,7 +31,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v34";
+var APP_VER="v35";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -914,6 +914,27 @@ function repDone(){
   }
 }
 
+/* ─────────── Auto-ajuste vertical: ninguna pantalla debe necesitar scroll ───────────
+   El tamaño efectivo del viewport varía por dispositivo, zoom de página y tamaño de texto
+   de iOS; si el contenido rebasa el alto visible, se encoge proporcionalmente hasta caber.
+   Excepciones: LECTURA (texto largo, scrollea a propósito) e HISTORIAL (lista). */
+function fitToViewport(){
+  app.style.zoom="";
+  if(state.screen==="history") return;
+  if(state.screen==="ex" && EXERCISES[state.exIdx].type==="reading") return;
+  // Iterativo: al encoger, el texto se reacomoda y el alto cambia un poco — refina hasta caber.
+  // OJO: medir el alto VISUAL (documentElement), no app.scrollHeight (viene en unidades ya
+  // escaladas por el propio zoom y haría encoger de más en cada pasada).
+  for(var i=0;i<3;i++){
+    var vh=window.innerHeight, sh=document.documentElement.scrollHeight;
+    if(sh<=vh+1) break;
+    var cur=parseFloat(app.style.zoom||"1");
+    app.style.zoom=String(Math.max(0.55, cur*(vh/sh)*0.995));
+  }
+}
+window.addEventListener("resize", function(){ fitToViewport(); });
+window.addEventListener("orientationchange", function(){ setTimeout(fitToViewport, 250); });
+
 /* ─────────── Render principal ─────────── */
 function render(){
   syncWakeLock();
@@ -930,6 +951,7 @@ function render(){
     else if(ex.type==="reading") app.appendChild(ReadScreen());
     else if(ex.type==="conversation") app.appendChild(ConvScreen());
   }
+  fitToViewport();
 }
 
 /* ─────────── Inicio ─────────── */
