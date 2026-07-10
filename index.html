@@ -31,7 +31,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v35";
+var APP_VER="v36";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -806,8 +806,8 @@ function pauseOverlay(){
 }
 
 /* ─────────── Cronómetro ─────────── */
-// Fin por silencio tras oír la voz: frases 2 s; sostenidos 3.5 s.
-var PHRASE_END_SILENCE_MS=2000, SUSTAIN_END_SILENCE_MS=3500;
+// Fin por silencio tras oír la voz: 3.5 s (da lugar a pausas a media frase sin cortarla).
+var PHRASE_END_SILENCE_MS=3500, SUSTAIN_END_SILENCE_MS=3500;
 // "GO!": se despliega 1 s después de mostrar la repetición para indicar cuándo empezar.
 var GO_DELAY_MS=1000;
 function flashGo(){
@@ -1095,25 +1095,28 @@ function liveGraphSVG(history, targetDb, ex){
   if(last){ var z=dbZone(last.db,targetDb); svg+='<circle cx="'+X(history.length-1)+'" cy="'+dbY(last.db)+'" r="4.5" fill="'+z.color+'"/>'; }
   svg+='</svg>';
 
-  // pitch lane
-  var z2=state.zoneNow||ex.zone, bandTop,bandBot;
-  if(z2.mode==="above"){ bandTop=pY(pMax); bandBot=pY(z2.min); }
-  else if(z2.mode==="below"){ bandTop=pY(z2.max); bandBot=pY(pMin); }
-  else { bandTop=pY(z2.max); bandBot=pY(z2.min); }
-  var svg2='<svg width="100%" height="'+HP+'" viewBox="0 0 '+W+' '+HP+'" preserveAspectRatio="none" style="display:block;">';
-  svg2+='<rect x="0" y="'+bandTop+'" width="'+W+'" height="'+Math.max(0,bandBot-bandTop)+'" fill="'+ex.color+'22"/>';
-  var seg=[], cur=[];
-  history.forEach(function(h,i){ if(h.mf!=null) cur.push(X(i).toFixed(1)+","+pY(h.mf).toFixed(1)); else { if(cur.length>1) seg.push(cur.join(" ")); cur=[]; } });
-  if(cur.length>1) seg.push(cur.join(" "));
-  seg.forEach(function(sp){ svg2+='<polyline points="'+sp+'" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
-  if(last&&last.mf!=null) svg2+='<circle cx="'+X(history.length-1)+'" cy="'+pY(last.mf)+'" r="3.8" fill="#6a1b9a"/>';
-  svg2+='</svg>';
-
   var box=el("div",{style:"background:#ffffff;border-radius:16px;border:1px solid rgba(26,35,126,0.12);padding:10px 10px 8px;width:100%;"});
   box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:0 2px 4px;"},[el("span",null,"🔊 VOLUMEN (dB)"),el("span",{style:"color:#2e7d32;"},"■ rango "+targetDb+"–90")]));
   box.appendChild(el("div",{html:svg}));
-  box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:8px 2px 4px;border-top:1px solid rgba(26,35,126,0.07);margin-top:6px;"},[el("span",null,"♪ TONO"),el("span",{style:"color:"+ex.color+";"},"■ "+(state.zoneNow||ex.zone).label)]));
-  box.appendChild(el("div",{html:svg2}));
+
+  // Carril de tono: solo si el ejercicio tiene zona de tono (frases es solo volumen).
+  var z2=state.zoneNow||ex.zone;
+  if(z2){
+    var bandTop,bandBot;
+    if(z2.mode==="above"){ bandTop=pY(pMax); bandBot=pY(z2.min); }
+    else if(z2.mode==="below"){ bandTop=pY(z2.max); bandBot=pY(pMin); }
+    else { bandTop=pY(z2.max); bandBot=pY(z2.min); }
+    var svg2='<svg width="100%" height="'+HP+'" viewBox="0 0 '+W+' '+HP+'" preserveAspectRatio="none" style="display:block;">';
+    svg2+='<rect x="0" y="'+bandTop+'" width="'+W+'" height="'+Math.max(0,bandBot-bandTop)+'" fill="'+ex.color+'22"/>';
+    var seg=[], cur=[];
+    history.forEach(function(h,i){ if(h.mf!=null) cur.push(X(i).toFixed(1)+","+pY(h.mf).toFixed(1)); else { if(cur.length>1) seg.push(cur.join(" ")); cur=[]; } });
+    if(cur.length>1) seg.push(cur.join(" "));
+    seg.forEach(function(sp){ svg2+='<polyline points="'+sp+'" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
+    if(last&&last.mf!=null) svg2+='<circle cx="'+X(history.length-1)+'" cy="'+pY(last.mf)+'" r="3.8" fill="#6a1b9a"/>';
+    svg2+='</svg>';
+    box.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#5a6899;font-weight:700;padding:8px 2px 4px;border-top:1px solid rgba(26,35,126,0.07);margin-top:6px;"},[el("span",null,"♪ TONO"),el("span",{style:"color:"+ex.color+";"},"■ "+z2.label)]));
+    box.appendChild(el("div",{html:svg2}));
+  }
   return box;
 }
 
@@ -1387,8 +1390,17 @@ function PhraseScreen(){
   _liveNodes={thermo:thermo,dbRow:dbRow,zoneLine:zoneLine,noteLine:null,timerEl:timerEl,metaLine:metaLine,graph:null,pianoKeys:null,pianoActive:null};
   updateLiveDOM();
 
+  // gráfica en vivo (volumen avanzando con el sonido y el tiempo)
+  if(state.micOn){
+    var gWrap=el("div",{id:"graphWrap",style:"margin-top:8px;"});
+    gWrap.appendChild(liveGraphSVG(state.history, state.settings.targetDb, ex));
+    gWrap.appendChild(el("div",{style:"font-size:10px;color:#93a0c8;text-align:center;margin-top:2px;"},"📏 Teléfono a ~30 cm de tu boca, siempre igual"));
+    body.appendChild(gWrap);
+    _liveNodes.graph=gWrap;
+  }
+
   // frase a leer
-  var carta=el("div",{class:"card",style:"margin-top:14px;background:#ffffff;border-radius:18px;border:1.5px solid "+ex.color+"40;padding:22px 20px;"});
+  var carta=el("div",{class:"card",style:"margin-top:10px;background:#ffffff;border-radius:18px;border:1.5px solid "+ex.color+"40;padding:18px 20px;"});
   carta.appendChild(el("div",{style:"font-size:22px;font-weight:800;color:#0a0a0a;line-height:1.45;text-align:center;"},'"'+exPhrases(ex)[idxInCycle]+'"'));
   body.appendChild(carta);
 
@@ -1421,7 +1433,7 @@ function PhraseScreen(){
   if(!state.running){
     foot.appendChild(btn((state.rep===0&&state.sec===0)?"▶  INICIAR":"▶  CONTINUAR", BIG_BTN+"background:"+ex.color+";", tickStart));
   } else {
-    if(state.micOn) foot.appendChild(el("div",{style:"font-size:12px;color:#5a6899;text-align:center;margin-bottom:9px;line-height:1.5;"},"Di la frase FUERTE · al callar 2 s, termina sola"));
+    if(state.micOn) foot.appendChild(el("div",{style:"font-size:12px;color:#5a6899;text-align:center;margin-bottom:9px;line-height:1.5;"},"Di la frase FUERTE · haz las pausas que necesites · al terminar se cierra sola"));
     foot.appendChild(btn("✓  LISTO", BIG_BTN+"background:#2e7d32;border:2px solid #2e7d32;", repDone));
   }
   wrap.appendChild(foot);
