@@ -30,7 +30,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v28";
+var APP_VER="v29";
 
 /* ─────────── Datos ─────────── */
 var EXERCISES = [
@@ -740,21 +740,19 @@ function gapOverlay(){
     }
     pie="Respira. La siguiente repetición empieza sola.";
   } else {
-    // Frases: califica la frase — pasa con ≥70% del tiempo por arriba de la meta de dB.
-    pie="Respira. La siguiente frase empieza sola.";
-    if(state.lastPhrase && state.lastPhrase.pct!=null){
-      if(state.lastPhrase.ok){ emoji="👏"; titulo="¡Fuerte y claro!"; col="#2e7d32"; cue=state.lastPhrase.pct+"% del tiempo arriba de la meta — ¡así se habla!"; }
-      else { emoji="💪"; titulo="Más fuerte"; col="#e65100"; cue="Solo "+state.lastPhrase.pct+"% arriba de la meta (necesitas 70%). La siguiente: ¡MÁS FUERTE!"; }
-    } else {
-      emoji="👏"; titulo="Cambia de frase"; col="#e65100"; cue=SENSE_CUES[state.rep%SENSE_CUES.length];
-    }
+    // Frases: SIN comentarios entre frases (interrumpen el esfuerzo) — solo el conteo.
+    // La calificación y el comentario van al final de la ronda de 10 (cycleSummaryOverlay).
+    var perC=exPhrases(ex).length;
+    emoji=null; cue=null; col=ex.color;
+    titulo="✓ FRASE "+((state.rep%perC)+1)+" DE "+perC;
+    pie="Respira. La siguiente empieza sola.";
   }
   var ov=el("div",{style:"position:fixed;inset:0;z-index:55;background:rgba(238,241,250,0.95);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;"});
-  ov.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;",class:"card"},emoji));
-  ov.appendChild(el("div",{style:"font-size:12px;letter-spacing:4px;color:"+col+";text-transform:uppercase;margin-bottom:8px;font-weight:800;"},titulo));
+  if(emoji) ov.appendChild(el("div",{style:"font-size:58px;line-height:1;margin-bottom:10px;",class:"card"},emoji));
+  ov.appendChild(el("div",{style:"font-size:"+(emoji?"12":"15")+"px;letter-spacing:4px;color:"+col+";text-transform:uppercase;margin-bottom:8px;font-weight:800;"},titulo));
   var n=el("div",{style:"font-size:76px;font-weight:900;letter-spacing:-2px;color:"+col+";line-height:1;margin:6px 0 12px;"},String(state.gap||3));
   _gapNode=n; ov.appendChild(n);
-  ov.appendChild(el("div",{style:"font-size:14px;color:#5a6899;line-height:1.6;"},cue));
+  if(cue) ov.appendChild(el("div",{style:"font-size:14px;color:#5a6899;line-height:1.6;"},cue));
   ov.appendChild(el("div",{style:"margin-top:6px;font-size:12px;color:#93a0c8;"},pie));
   return ov;
 }
