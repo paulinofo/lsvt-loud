@@ -31,7 +31,21 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v37";
+var APP_VER="v38";
+
+/* ─────────── Reportero de errores visible (diagnóstico en el dispositivo) ───────────
+   Si algo truena en el teléfono, el error se muestra en pantalla en vez de dejarla en blanco. */
+function showErrBanner(msg){
+  try{
+    var d=document.createElement("div");
+    d.style.cssText="position:fixed;bottom:0;left:0;right:0;z-index:999;background:#c62828;color:#fff;font-size:11px;padding:8px 12px;font-family:monospace;word-break:break-word;";
+    d.textContent="⚠️ "+msg;
+    document.body.appendChild(d);
+    setTimeout(function(){ try{ d.remove(); }catch(e){} }, 20000);
+  }catch(e){}
+}
+window.addEventListener("error", function(ev){ showErrBanner((ev.message||"error")+(ev.lineno?(" @"+ev.lineno):"")); });
+window.addEventListener("unhandledrejection", function(ev){ showErrBanner("promesa: "+(ev.reason&&ev.reason.message||ev.reason||"?")); });
 
 /* ─────────── Idioma (ES/EN) ───────────
    t(s): traduce cadenas ESTÁTICAS exactas vía TR (se aplica automáticamente en el()).
@@ -1100,6 +1114,29 @@ window.addEventListener("orientationchange", function(){ setTimeout(fitToViewpor
 
 /* ─────────── Render principal ─────────── */
 function render(){
+  try{ renderInner(); }
+  catch(e){
+    showErrBanner("render: "+(e.message||e));
+    // Auto-recuperación: si la pantalla que falló no era el inicio, regresa al inicio.
+    if(state.screen!=="home"){
+      try{ state.screen="home"; state.running=false; renderInner(); return; }catch(e2){}
+    }
+    // Último recurso: botón para reiniciar la vista.
+    try{
+      app.innerHTML="";
+      var b=el("button",{style:"margin:40vh auto 0;display:block;padding:16px 30px;border:none;border-radius:14px;background:#1a237e;color:#fff;font-size:16px;font-weight:800;"},tt("↻ REINICIAR PANTALLA","↻ RESTART SCREEN"));
+      b.addEventListener("click",function(){ state.screen="home"; render(); });
+      app.appendChild(b);
+    }catch(e3){}
+  }
+}
+// Vigilante de arranque: si la pantalla queda vacía (iOS a veces arranca la PWA en blanco), re-renderiza.
+var _bootTries=0;
+setInterval(function(){
+  if(_bootTries>=5) return;
+  if(!app.children.length){ _bootTries++; try{ render(); }catch(e){} }
+}, 1200);
+function renderInner(){
   syncWakeLock();
   app.innerHTML="";
   var s=state.screen;
