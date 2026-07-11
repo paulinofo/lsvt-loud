@@ -31,7 +31,7 @@
 "use strict";
 
 // Versión visible de la app — mantener en sincronía con CACHE de sw.js al desplegar.
-var APP_VER="v38";
+var APP_VER="v39";
 
 /* ─────────── Reportero de errores visible (diagnóstico en el dispositivo) ───────────
    Si algo truena en el teléfono, el error se muestra en pantalla en vez de dejarla en blanco. */
@@ -1009,8 +1009,9 @@ function tickStart(){
   state.waitingVoice = (_t==="sustain"||_t==="phrases") && !state.micError;
   if(!state.waitingVoice){ startRepTimer(); }
   else {
-    // "GO!" a los 2 s de desplegar la repetición (si aún no has empezado a vocalizar).
-    setTimeout(function(){ if(state.running && state.waitingVoice){ flashGo(); } }, GO_DELAY_MS);
+    // "GO!": en FRASES va PRIMERO (apenas se muestra la frase); en tonos, al segundo.
+    var _goDelay=(EXERCISES[state.exIdx].type==="phrases")?250:GO_DELAY_MS;
+    setTimeout(function(){ if(state.running && state.waitingVoice){ flashGo(); } }, _goDelay);
     // Red de seguridad: si el micrófono no llega a conectar (p.ej. permiso colgado), arranca solo.
     setTimeout(function(){ if(state.running && state.waitingVoice && !state.micOn){ state.waitingVoice=false; startRepTimer(); updateTimer(); } }, 4000);
   }
